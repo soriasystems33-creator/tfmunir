@@ -1144,7 +1144,7 @@ window.cleanPhone=function(el){
     if(tpv)tpv.addEventListener('input',onClean);
 })();
 window.sendWhatsapp=(phone,name,date,time)=>{if(!phone)return;let p=phone.replace(/\D/g,'');if(!p.startsWith('34')&&p.length===9)p='34'+p;
-const msg=`Hola ${name}, te recordamos tu cita en Frida Nails el día ${date} a las ${time}. ¡Te esperamos!`;window.open(`https://wa.me/${p}?text=${encodeURIComponent(msg)}`,'_blank')};
+const msg=`Hola ${name}, te recordamos tu cita en UNIR el día ${date} a las ${time}. ¡Te esperamos!`;window.open(`https://wa.me/${p}?text=${encodeURIComponent(msg)}`,'_blank')};
 
 // ── NOTIFICACIONES DE ACTIVIDAD ──
 var g_fridaNotifs=[];
@@ -1215,21 +1215,13 @@ db=getFirestore(app);
 auth=getAuth(app);
 try{await enableIndexedDbPersistence(db)}catch(e){console.warn('Persistence:',e.code)}
 setStatus('loading','Autenticando...');
-onAuthStateChanged(auth,user=>{
-var btn=document.getElementById('login-btn');if(btn){btn.disabled=false;btn.textContent='Iniciar Sesión'}
-if(user){
+// Bypass login para el TFM
 document.getElementById('login-screen').classList.add('hidden');
 document.getElementById('app-container').classList.remove('hidden');
-setStatus('ok','Conectado ✓');
-console.log('✅ Auth OK, UID:',user.uid);
+setStatus('ok','Conectado V');
+console.log('Auth bypassed for TFM');
 startListeners();
 setTimeout(()=>window.setTab('calendar_all'),100);
-} else {
-document.getElementById('login-screen').classList.remove('hidden');
-document.getElementById('app-container').classList.add('hidden');
-setStatus('loading','Desconectado');
-}
-});
 }catch(e){
 console.error('❌ Init error:',e);
 setStatus('error','Error Fatal');
@@ -1727,7 +1719,7 @@ window.tpvShowTicket=(d)=>{
   const tc=document.getElementById('ticket-content');
   if(tc)tc.innerHTML=`
     <div style="text-align:center;padding-bottom:12px;border-bottom:2px solid #e0d8d5">
-      <p style="font-size:18px;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;color:#2e2826">Frida Nails</p>
+      <p style="font-size:18px;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:700;color:#2e2826">UNIR</p>
     </div>
     <div style="font-size:9px;color:#7a6b67;padding:8px 0;border-bottom:1px dashed #e0d8d5">
       <div style="display:flex;justify-content:space-between"><span>Ticket:</span><strong>${d.ticketNum}</strong></div>
@@ -1771,7 +1763,7 @@ window.tpvSendWhatsapp=()=>{
   const d=lastTicketData;
   const lines=d.lines.map(l=>`  • ${l.name} × ${l.qty}  →  ${fmt(l.price*l.qty)} €`).join('\n');
   const msg=
-`🌸 *Frida Nails* 🌸
+`🌸 *UNIR* 🌸
 ─────────────────────
 🧾 Ticket: ${d.ticketNum}
 📅 ${d.dateStr} · ${d.timeStr}
@@ -1794,7 +1786,7 @@ window.tpvPrintTicket=()=>{
   const win=window.open('','_blank','width=400,height=600');
   win.document.write(`<!DOCTYPE html><html><head>
     <meta charset="UTF-8">
-    <title>Ticket Frida Nails</title>
+    <title>Ticket UNIR</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,700&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
       *{margin:0;padding:0;box-sizing:border-box;font-family:'Nunito',monospace;font-size:11px}
@@ -1835,7 +1827,7 @@ window.exportToExcel=()=>{
   // ── HOJA RESUMEN ANUAL ─────────────────────────────────────────
   const summaryRows=[
     ['RESUMEN ANUAL DE CONTABILIDAD','','','','','','','',''],
-    [`Frida Nails — Año ${year}`,'','','','','','','',''],
+    [`UNIR — Año ${year}`,'','','','','','','',''],
     [`Generado el ${new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'})}`,'','','','','','','',''],
     ['','','','','','','','',''],
     ['MES','INGRESOS BASE','INGRESOS IVA','INGRESOS TOTAL','','GASTOS BASE','GASTOS IVA','GASTOS TOTAL','BENEFICIO NETO'],
@@ -1892,7 +1884,7 @@ window.exportToExcel=()=>{
     if(mInc.length>0){
       const incHeader=[
         [`INGRESOS — ${monthNames[m].toUpperCase()} ${year}`,'','','','','','',''],
-        [`Frida Nails | IVA incluido 21%`,'','','','','','',''],
+        [`UNIR | IVA incluido 21%`,'','','','','','',''],
         ['','','','','','','',''],
         ['FECHA','CLIENTE','TELÉFONO','SERVICIO','ESPECIALISTA','MÉTODO PAGO','BASE IMPONIBLE (€)','IVA 21% (€)','TOTAL (€)'],
       ];
@@ -1920,7 +1912,7 @@ window.exportToExcel=()=>{
     if(mExp.length>0){
       const expHeader=[
         [`GASTOS — ${monthNames[m].toUpperCase()} ${year}`,'','','','','','',''],
-        [`Frida Nails`,'','','','','','',''],
+        [`UNIR`,'','','','','','',''],
         ['','','','','','','',''],
         ['FECHA','CONCEPTO','CATEGORÍA','','','','BASE IMPONIBLE (€)','IVA (€)','TOTAL (€)'],
       ];
@@ -1956,7 +1948,7 @@ window.exportToExcel=()=>{
   }
 
   // ── DESCARGAR ──────────────────────────────────────────────────
-  const filename=`FridaNails_Ingresos_${year}.xlsx`;
+  const filename=`UNIR_Ingresos_${year}.xlsx`;
   XLSX.writeFile(wb,filename);
   console.log(`✅ Excel exportado: ${filename}`);
 };
@@ -2113,6 +2105,7 @@ window.renderExpenses=()=>{
 // VERSION 2026-05-11 17:36 - LÍNEA LIMPIA PARA EVITAR CACHÉ
 // ══════════════════════════════════════════════════════════════
 init();window.checkGDPR();
+
 
 
 
