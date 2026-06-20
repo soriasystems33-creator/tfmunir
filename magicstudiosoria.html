@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Frida Nails | Reserva tu Cita</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Frida Nails">
+    <meta name="theme-color" content="#5b8f7a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Reserva tu cita en Frida Nails.">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #faf7f4; }
+        iframe { width: 100%; height: 100%; border: none; }
+        #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #faf7f4; z-index: 10; transition: opacity .5s; }
+        #loading.hidden { opacity: 0; pointer-events: none; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e0d8d5; border-top-color: #5b8f7a; border-radius: 50%; animation: spin .8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="loading"><div class="spinner"></div></div>
+    <iframe id="booking-iframe" allow="geolocation" onload="document.getElementById('loading').classList.add('hidden')"></iframe>
+    <script>
+        var iframe = document.getElementById('booking-iframe');
+        iframe.src = 'https://reservas-frida-nails.vercel.app' + window.location.search;
+    </script>
+</body>
+</html>

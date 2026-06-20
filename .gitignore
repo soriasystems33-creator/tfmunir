@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Firebase service account — NUNCA subir a Git
+*-service-account*.json
+serviceAccountKey*.json
+.env
+.env.local
