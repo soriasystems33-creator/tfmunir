@@ -684,20 +684,7 @@ if(isConfig){
   const chBadge=hasClosedHours?`<div class="text-[7px] font-black mt-1 uppercase" style="color:var(--rose)">⏰ ${config.specialDays[ds].closedHours.length} cierre${config.specialDays[ds].closedHours.length>1?'s':''}</div>`:'';
   div.innerHTML=`<div class="flex justify-between font-black"><span class="${isAuto?'text-slate-400':''}">${d}</span>${icon}</div>${isAuto?'<div class="text-[7px] text-indigo-300 font-bold mt-1 uppercase">↑ Global</div>':''}${chBadge}`;
   div.onclick=()=>{
-    if(rangeStart===null){
-      rangeStart=ds;
-      div.classList.add('ring-2','ring-orange-400','bg-orange-50');
-    } else if(rangeStart===ds){
-      rangeStart=null;
-      div.classList.remove('ring-2','ring-orange-400','bg-orange-50');
-    } else {
-      const rs=rangeStart;
-      rangeStart=null;
-      document.querySelectorAll('#config-calendar-body .calendar-day').forEach(el=>el.classList.remove('ring-2','ring-orange-400','bg-orange-50'));
-      const startD=rs<ds?rs:ds;
-      const endD=rs<ds?ds:rs;
-      if(startD===endD){window.openConfigDay(startD);}else{window.openRangeModal(startD,endD);}
-    }
+    window.openConfigDay(ds);
   };
 }else{
   const closed=dc.type==='closed';
@@ -1073,18 +1060,32 @@ if(configEntity==='global'){
 
 // ---- RANGE MODAL (day range config) ----
 // ---- RANGES (Cierre por Días) ----
-let currentRangeStart = null;
-let currentRangeEnd = null;
 let currentRangeScope = 'global';
 let currentRangeType = 'closed';
 
+window.openRangeModalStandalone = () => {
+  const today = getLD(new Date());
+  document.getElementById('range-start-date').value = today;
+  document.getElementById('range-end-date').value = today;
+  document.getElementById('range-modal-subtitle').innerText = "Personalizado";
+  
+  const empSelect = document.getElementById('range-emp-select');
+  if(empSelect) {
+    empSelect.innerHTML = employeesDB.map(e => `<option value="${e.name}">${esc(e.name)}</option>`).join('');
+  }
+  
+  window.selectRangeScope('global');
+  window.selectRangeType('closed');
+  
+  document.getElementById('range-modal').classList.remove('hidden');
+};
+
 window.openRangeModal = (startDate, endDate) => {
-  currentRangeStart = startDate;
-  currentRangeEnd = endDate;
+  document.getElementById('range-start-date').value = startDate;
+  document.getElementById('range-end-date').value = endDate;
   
   const sd = new Date(startDate+'T12:00:00'), ed = new Date(endDate+'T12:00:00');
   const nDays = Math.round((ed-sd)/(1000*60*60*24))+1;
-  
   document.getElementById('range-modal-subtitle').innerText = `${startDate} → ${endDate} (${nDays} días)`;
   
   const empSelect = document.getElementById('range-emp-select');
@@ -1149,8 +1150,13 @@ window.saveRangeConfig = async () => {
   const splitStart2 = document.getElementById('range-start2').value || '16:00';
   const splitEnd2 = document.getElementById('range-end2').value || '20:00';
   
+  const startDate = document.getElementById('range-start-date').value;
+  const endDate = document.getElementById('range-end-date').value;
+
+  if(!startDate || !endDate || startDate > endDate) return alert('Por favor, selecciona un rango de fechas válido.');
+  
   let sd = { ...(config.specialDays || {}) };
-  const cur = new Date(currentRangeStart+'T12:00:00'), last = new Date(currentRangeEnd+'T12:00:00');
+  const cur = new Date(startDate+'T12:00:00'), last = new Date(endDate+'T12:00:00');
   
   while(cur <= last) {
     const ds = getLD(cur);
