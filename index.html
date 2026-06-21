@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -965,6 +965,138 @@
       </div>
     </div>
 
+    <!-- Rango Modal -->
+    <div id="range-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeRangeModal()"></div>
+        <div class="relative w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" style="background:var(--bg-main)">
+            <div class="p-5 border-b border-black/5" style="background:var(--brown)">
+                <h3 class="font-bold text-white text-lg text-center" id="range-modal-title">Configurar Rango</h3>
+                <p class="text-white/80 text-center text-xs mt-1" id="range-modal-subtitle"></p>
+            </div>
+            
+            <div class="p-6 space-y-5 overflow-y-auto" style="background:#fffdf9">
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-3 text-center" style="color:var(--brown)">Afecta a</label>
+                    <div class="flex gap-2">
+                        <button id="range-scope-global" onclick="selectRangeScope('global')" class="flex-1 py-3 rounded-2xl border-2 font-bold text-xs uppercase transition-colors" style="border-color:var(--green-deep);background:var(--green-deep);color:white">Global</button>
+                        <button id="range-scope-emp" onclick="selectRangeScope('emp')" class="flex-1 py-3 rounded-2xl border-2 font-bold text-xs uppercase transition-colors" style="border-color:var(--brown-light);color:var(--brown);background:transparent">Por Empleada</button>
+                    </div>
+                </div>
+
+                <div id="range-emp-select-container" class="hidden">
+                    <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Empleada</label>
+                    <select id="range-emp-select" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent appearance-none" style="border-color:var(--brown-light);color:var(--brown)"></select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Estado</label>
+                    <button id="range-btn-cerrado" onclick="selectRangeType('closed')" class="w-full py-4 rounded-2xl border-2 font-bold text-sm uppercase transition-all flex items-center justify-between px-5" style="border-color:var(--red-light);color:var(--red)">
+                        <span>Cerrado (Todos los días)</span><i data-lucide="door-closed" class="w-5 h-5"></i>
+                    </button>
+                    <button id="range-btn-custom" onclick="selectRangeType('custom')" class="w-full py-4 rounded-2xl border-2 font-bold text-sm uppercase transition-all flex items-center justify-between px-5" style="border-color:var(--brown-light);color:var(--brown)">
+                        <span>Jornada Continua</span><i data-lucide="clock" class="w-5 h-5"></i>
+                    </button>
+                    <button id="range-btn-split" onclick="selectRangeType('split')" class="w-full py-4 rounded-2xl border-2 font-bold text-sm uppercase transition-all flex items-center justify-between px-5" style="border-color:var(--brown-light);color:var(--brown)">
+                        <span>Jornada Partida</span><i data-lucide="sun" class="w-5 h-5"></i>
+                    </button>
+                    <button id="range-btn-delete" onclick="selectRangeType('delete')" class="w-full py-4 rounded-2xl border-2 font-bold text-sm uppercase transition-all flex items-center justify-between px-5" style="border-color:var(--green-light);color:var(--green-deep)">
+                        <span>Eliminar Configuración</span><i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <!-- Tiempos para custom/split -->
+                <div id="range-custom-times" class="hidden space-y-4 pt-2 border-t" style="border-color:var(--brown-light)">
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--brown-mid)">Apertura</label>
+                            <input type="time" id="range-start" class="w-full p-3 rounded-xl border-2 font-bold text-sm bg-transparent" style="border-color:var(--brown-light);color:var(--brown)">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--brown-mid)">Cierre</label>
+                            <input type="time" id="range-end" class="w-full p-3 rounded-xl border-2 font-bold text-sm bg-transparent" style="border-color:var(--brown-light);color:var(--brown)">
+                        </div>
+                    </div>
+                    <div id="range-split-times" class="hidden flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--brown-mid)">Apertura 2</label>
+                            <input type="time" id="range-start2" class="w-full p-3 rounded-xl border-2 font-bold text-sm bg-transparent" style="border-color:var(--brown-light);color:var(--brown)">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--brown-mid)">Cierre 2</label>
+                            <input type="time" id="range-end2" class="w-full p-3 rounded-xl border-2 font-bold text-sm bg-transparent" style="border-color:var(--brown-light);color:var(--brown)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-4">
+                    <button onclick="closeRangeModal()" class="flex-1 py-4 rounded-2xl border-2 font-bold text-sm uppercase transition-colors" style="border-color:var(--brown-light);color:var(--brown)">Cancelar</button>
+                    <button onclick="saveRangeConfig()" class="flex-1 py-4 rounded-2xl font-bold text-sm uppercase transition-colors shadow-lg text-white" style="background:var(--green-deep)">Aplicar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Block Modal -->
+    <div id="block-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeBlockModal()"></div>
+        <div class="relative w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" style="background:var(--bg-main)">
+            <div class="p-5 border-b border-black/5" style="background:#f97316">
+                <h3 class="font-bold text-white text-lg text-center">Bloquear Horario</h3>
+                <p class="text-white/80 text-center text-xs mt-1" id="block-modal-emp">Camila</p>
+            </div>
+            
+            <div class="p-6 space-y-5 overflow-y-auto" style="background:#fffdf9">
+                <input type="hidden" id="block-emp-name">
+                <input type="hidden" id="block-date">
+                
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Desde</label>
+                        <select id="block-start" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent appearance-none" style="border-color:var(--brown-light);color:var(--brown)">
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Hasta</label>
+                        <select id="block-end" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent appearance-none" style="border-color:var(--brown-light);color:var(--brown)">
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Motivo</label>
+                    <select id="block-reason" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent appearance-none" style="border-color:var(--brown-light);color:var(--brown)">
+                        <option value="Comida">Comida</option>
+                        <option value="Descanso">Descanso</option>
+                        <option value="Formación">Formación</option>
+                        <option value="Personal">Asunto Personal</option>
+                        <option value="Vacaciones">Vacaciones</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Repetición</label>
+                    <select id="block-recurrence" onchange="toggleBlockRecurrenceEnd()" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent appearance-none" style="border-color:var(--brown-light);color:var(--brown)">
+                        <option value="none">Solo este día</option>
+                        <option value="daily">Todos los días</option>
+                        <option value="weekly" id="block-recurrence-weekly">Cada semana</option>
+                        <option value="biweekly">Cada dos semanas</option>
+                    </select>
+                </div>
+
+                <div id="block-recurrence-end-container" class="hidden">
+                    <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Hasta (opcional)</label>
+                    <input type="date" id="block-recurrence-end" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent" style="border-color:var(--brown-light);color:var(--brown)">
+                </div>
+
+                <div class="flex gap-2 pt-4 border-t" style="border-color:var(--brown-light)">
+                    <button onclick="closeBlockModal()" class="flex-1 py-4 rounded-2xl border-2 font-bold text-sm uppercase transition-colors" style="border-color:var(--brown-light);color:var(--brown)">Cancelar</button>
+                    <button onclick="saveBlockForm()" class="flex-1 py-4 rounded-2xl font-bold text-sm uppercase transition-colors shadow-lg text-white" style="background:#f97316">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="gdpr-banner" class="fixed bottom-0 left-0 right-0 text-white p-6 z-[100] hidden" style="background:var(--brown)">
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div><h3 class="font-semibold text-lg">🍪 Protección de Datos</h3><p class="text-xs mt-1 opacity-70">Almacenamos datos personales exclusivamente para gestionar tus citas. Cumplimos con el RGPD.</p></div>
@@ -972,6 +1104,6 @@
         </div>
     </div>
 
-    <script src="admin_logic.js?v=20260512_V2"></script>
+    <script src="admin_logic.js?v=20260512_V3"></script>
 </body>
 </html>

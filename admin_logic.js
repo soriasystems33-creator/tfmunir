@@ -1,4 +1,4 @@
-﻿// Firebase Compat — no imports needed, loaded via script tags in HTML
+// Firebase Compat — no imports needed, loaded via script tags in HTML
 console.log("🚀 TFM UNIR — PANEL GESTIÓN CARGADO [2026-06-20]");
 const FC={apiKey:"AIzaSyAb2Dp88yigDc7Pui_p_0SfSsNqF9SYghI",authDomain:"tfm-unir-3ce48.firebaseapp.com",projectId:"tfm-unir-3ce48",storageBucket:"tfm-unir-3ce48.firebasestorage.app",messagingSenderId:"277423950766",appId:"1:277423950766:web:e79790aa22a7c1f833963f"};
 const AID="tfm-unir-default";
@@ -14,6 +14,8 @@ var selectedTime=null;
 var tmpLocal={type:'standard',start:'09:00',end:'20:00'};
 var tmpClosedHours=[];
 var specialistViewLevel='month';
+var blocksDB=[];
+var rangeStart=null;
 var incomeChart=null;
 var clientProfiles={};var clientMeta={};
 var empInApt=function(a,en){if(!en)return false;var el=en.toLowerCase();var aEmp=(a.employee||'').toLowerCase();if(aEmp==='todas'||aEmp==='cualquiera'||aEmp==='ambos'||aEmp===''||aEmp==='automático')return true;return aEmp===el||aEmp.split(',').map(function(e){return e.trim()}).includes(el)||(a.services&&a.services.some(function(s){var se=(s.employee||'').toLowerCase();return se===el||se==='todas'||se==='cualquiera'||se==='ambos'||se===''||se==='automático'}))};
@@ -341,10 +343,16 @@ try{
                 <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:#f0ebe6;color:#7a6b67">${openStr} – ${closeStr}</span>
                 <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;color:white;background:${empColor}">${activeCount} citas</span>
             </div>
-            <button onclick="window.openNewAptForDay('${ds}','${emp.name.replace(/'/g,"\\'")}') "
-                style="background:${empColor};color:white;border:none;padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">
-                + Nueva cita
-            </button>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+              <button onclick="window.openBlockModal('${emp.name.replace(/'/g,"\\'")}','${ds}')"
+                  style="background:#f97316;color:white;border:none;padding:8px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer">
+                  🔒 Bloquear
+              </button>
+              <button onclick="window.openNewAptForDay('${ds}','${emp.name.replace(/'/g,"\\'")}')"
+                  style="background:${empColor};color:white;border:none;padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">
+                  + Nueva cita
+              </button>
+            </div>
         </div>`;
 
     if(dc.type==='closed'){
@@ -396,6 +404,23 @@ try{
             </div>`;
         }
     }
+
+    // Bloques de horario (blocks)
+    const empBlocks=window.loadBlocksForDate(ds,emp.name);
+    empBlocks.forEach(bl=>{
+      const blStart=t2m(bl.startTime);
+      const blEnd=t2m(bl.endTime);
+      const blTopPx=(blStart-startMin)*PX_PER_MIN;
+      const blHeightPx=Math.max((blEnd-blStart)*PX_PER_MIN-2,18);
+      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}–${bl.endTime})"
+        style="position:absolute;top:${blTopPx}px;left:4px;right:4px;height:${blHeightPx}px;
+          background:#fff7ed;border-left:4px solid #f97316;border-radius:8px;
+          padding:3px 8px;overflow:hidden;z-index:5;opacity:0.92;
+          box-shadow:0 1px 4px rgba(249,115,22,.2);pointer-events:auto;cursor:default">
+        <div style="font-size:9px;font-weight:800;color:#c2410c;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔒 ${esc(bl.reason)}</div>
+        ${blHeightPx>22?`<div style="font-size:8px;color:#ea580c">${bl.startTime}–${bl.endTime}</div>`:''}
+      </div>`;
+    });
 
     // Citas
     dayApts.forEach(apt=>{
@@ -658,7 +683,22 @@ if(isConfig){
   else icon='<i data-lucide="unlock" class="w-3 h-3 text-slate-200"></i>';
   const chBadge=hasClosedHours?`<div class="text-[7px] font-black mt-1 uppercase" style="color:var(--rose)">⏰ ${config.specialDays[ds].closedHours.length} cierre${config.specialDays[ds].closedHours.length>1?'s':''}</div>`:'';
   div.innerHTML=`<div class="flex justify-between font-black"><span class="${isAuto?'text-slate-400':''}">${d}</span>${icon}</div>${isAuto?'<div class="text-[7px] text-indigo-300 font-bold mt-1 uppercase">↑ Global</div>':''}${chBadge}`;
-  div.onclick=()=>window.openConfigDay(ds);
+  div.onclick=()=>{
+    if(rangeStart===null){
+      rangeStart=ds;
+      div.classList.add('ring-2','ring-orange-400','bg-orange-50');
+    } else if(rangeStart===ds){
+      rangeStart=null;
+      div.classList.remove('ring-2','ring-orange-400','bg-orange-50');
+    } else {
+      const rs=rangeStart;
+      rangeStart=null;
+      document.querySelectorAll('#config-calendar-body .calendar-day').forEach(el=>el.classList.remove('ring-2','ring-orange-400','bg-orange-50'));
+      const startD=rs<ds?rs:ds;
+      const endD=rs<ds?ds:rs;
+      if(startD===endD){window.openConfigDay(startD);}else{window.openRangeModal(startD,endD);}
+    }
+  };
 }else{
   const closed=dc.type==='closed';
   let dayApts=appointments.filter(a=>a.date===ds);if(empFilter)dayApts=dayApts.filter(function(a){return empInApt(a,empFilter)});
@@ -789,12 +829,38 @@ const days=[{id:1,name:'Lunes'},{id:2,name:'Martes'},{id:3,name:'Miércoles'},{i
 let cw=config.weekly,title="Horario GLOBAL del Centro",bg="bg-slate-100";
 if(configEntity!=='global'){const key=`weekly_${configEntity}`;if(!config[key])config[key]={};cw=config[key];title=`Horario: ${configEntity}`;bg="bg-purple-50"}
 let html=`<div class="col-span-full mb-4 space-y-4"><div class="${bg} p-4 rounded-2xl border-2 text-center"><h3 class="font-black text-slate-700 uppercase">${title}</h3></div></div><div class="col-span-1 md:col-span-2 space-y-3">`;
-days.forEach(d=>{let ds='09:00',de='20:00',closed=false;if(configEntity!=='global'&&!cw[d.id]){const gd=config.weekly[d.id]||{start:'09:00',end:'20:00',closed:false};ds=gd.start;de=gd.end;closed=gd.closed}else if(cw[d.id]){ds=cw[d.id].start;de=cw[d.id].end;closed=cw[d.id].closed}
-const dc={start:ds,end:de,closed:closed};
-html+=`<div class="flex flex-wrap items-center gap-2 sm:gap-4 p-3 border rounded-xl bg-white shadow-sm"><div class="w-20 font-black uppercase text-xs text-slate-600">${d.name}</div><label class="flex items-center gap-2 cursor-pointer bg-slate-50 px-2 py-1 rounded border shadow-sm"><input type="checkbox" id="w-closed-${d.id}" class="w-4 h-4 rounded text-red-500" ${dc.closed?'checked':''} onchange="this.parentElement.nextElementSibling.classList.toggle('opacity-30',this.checked);this.parentElement.nextElementSibling.classList.toggle('pointer-events-none',this.checked)"><span class="text-[9px] font-bold text-red-400 uppercase">Cerrado</span></label><div class="flex items-center gap-2 flex-grow ${dc.closed?'opacity-30 pointer-events-none':''}"><input type="time" id="w-start-${d.id}" value="${dc.start}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24"><span class="text-slate-400 font-black text-xs">-</span><input type="time" id="w-end-${d.id}" value="${dc.end}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24"></div></div>`});
+days.forEach(d=>{let ds='09:00',de='20:00',ds2='13:00',de2='15:00',closed=false,type='complete';
+if(configEntity!=='global'&&!cw[d.id]){const gd=config.weekly[d.id]||{start:'09:00',end:'20:00',closed:false,type:'complete'};ds=gd.start;de=gd.end;closed=gd.closed;type=gd.type||'complete';ds2=gd.start2||'13:00';de2=gd.end2||'15:00'}
+else if(cw[d.id]){ds=cw[d.id].start;de=cw[d.id].end;closed=cw[d.id].closed;type=cw[d.id].type||'complete';ds2=cw[d.id].start2||'13:00';de2=cw[d.id].end2||'15:00'}
+const dc={start:ds,end:de,closed:closed,type:type,start2:ds2,end2:de2};
+const isSplit=dc.type==='split';
+html+=`<div class="flex flex-wrap items-center gap-2 sm:gap-4 p-3 border rounded-xl bg-white shadow-sm">
+  <div class="w-20 font-black uppercase text-xs text-slate-600">${d.name}</div>
+  <label class="flex items-center gap-2 cursor-pointer bg-slate-50 px-2 py-1 rounded border shadow-sm">
+    <input type="checkbox" id="w-closed-${d.id}" class="w-4 h-4 rounded text-red-500" ${dc.closed?'checked':''}
+      onchange="var tg=this;var row=document.getElementById('w-times-${d.id}');var sel=document.getElementById('w-type-${d.id}');row.classList.toggle('opacity-30',tg.checked);row.classList.toggle('pointer-events-none',tg.checked);sel.classList.toggle('opacity-30',tg.checked);sel.classList.toggle('pointer-events-none',tg.checked)">
+    <span class="text-[9px] font-bold text-red-400 uppercase">Cerrado</span>
+  </label>
+  <select id="w-type-${d.id}" class="p-1 border rounded-lg text-xs font-bold bg-white outline-none ${dc.closed?'opacity-30 pointer-events-none':''}"
+    onchange="var sp=document.getElementById('w-split-${d.id}');sp.classList.toggle('hidden',this.value!=='split')">
+    <option value="complete" ${!isSplit?'selected':''}>Jornada completa</option>
+    <option value="split" ${isSplit?'selected':''}>Jornada partida</option>
+  </select>
+  <div id="w-times-${d.id}" class="flex flex-wrap items-center gap-2 flex-grow ${dc.closed?'opacity-30 pointer-events-none':''}">
+    <input type="time" id="w-start-${d.id}" value="${dc.start}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24">
+    <span class="text-slate-400 font-black text-xs">–</span>
+    <input type="time" id="w-end-${d.id}" value="${dc.end}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24">
+    <div id="w-split-${d.id}" class="flex items-center gap-1 ${!isSplit?'hidden':''}">
+      <span class="text-orange-400 font-black text-xs">|</span>
+      <input type="time" id="w-start2-${d.id}" value="${dc.start2}" class="p-1.5 border border-orange-300 rounded-lg font-bold bg-orange-50 text-xs outline-none w-24">
+      <span class="text-slate-400 font-black text-xs">–</span>
+      <input type="time" id="w-end2-${d.id}" value="${dc.end2}" class="p-1.5 border border-orange-300 rounded-lg font-bold bg-orange-50 text-xs outline-none w-24">
+    </div>
+  </div>
+</div>`});
 html+='</div>';c.innerHTML=html};
-window.saveConfig=async()=>{try{const tw={};[1,2,3,4,5,6,0].forEach(id=>{tw[id]={start:document.getElementById(`w-start-${id}`).value,end:document.getElementById(`w-end-${id}`).value,closed:document.getElementById(`w-closed-${id}`).checked}});
-const up={};if(configEntity==='global'){up.weekly=tw;const l=tw[1];up.start=l.closed?'09:00':l.start;up.end=l.closed?'20:00':l.end;config.weekly=tw;config.start=up.start;config.end=up.end}else{up[`weekly_${configEntity}`]=tw;config[`weekly_${configEntity}`]=tw}
+window.saveConfig=async()=>{try{const tw={};[1,2,3,4,5,6,0].forEach(id=>{const type=document.getElementById(`w-type-${id}`)?.value||'complete';const entry={start:document.getElementById(`w-start-${id}`).value,end:document.getElementById(`w-end-${id}`).value,closed:document.getElementById(`w-closed-${id}`).checked,type:type};if(type==='split'){entry.start2=document.getElementById(`w-start2-${id}`)?.value||'';entry.end2=document.getElementById(`w-end2-${id}`)?.value||''}tw[id]=entry});
+const up={};if(configEntity==='global'){up.weekly=tw;const l=tw[1];up.start=l.closed?'09:00':l.start;up.end=l.closed?'20:00':(l.type==='split'?l.end2:l.end);config.weekly=tw;config.start=up.start;config.end=up.end}else{up[`weekly_${configEntity}`]=tw;config[`weekly_${configEntity}`]=tw}
 console.log('Guardando config...',up);
 await setDoc(doc(db,'artifacts',AID,'public','data','settings','main'),up,{merge:true});
 alert(`✅ Configuración de ${configEntity.toUpperCase()} guardada.`);
@@ -860,21 +926,22 @@ window.openConfigDay=ds=>{
   if(window.lucide)lucide.createIcons();
 };
 window.setLocalConfigType=type=>{tmpLocal.type=type;
-['standard','closed','custom'].forEach(t=>{
+['standard','closed','custom','split'].forEach(t=>{
   const btn=document.getElementById(`btn-local-${t}`);
   const badge=document.getElementById(`badge-local-${t}`);
   if(btn){
     if(t===type){
       btn.className='w-full p-3.5 border-2 rounded-2xl font-bold text-left flex justify-between items-center transition-all text-xs shadow-sm';
-      const colors={standard:'border-blue-400 bg-blue-50 text-blue-700',closed:'border-red-400 bg-red-50 text-red-700',custom:'border-indigo-400 bg-indigo-50 text-indigo-700'};
-      btn.className+=' '+colors[t];
+      const colors={standard:'border-blue-400 bg-blue-50 text-blue-700',closed:'border-red-400 bg-red-50 text-red-700',custom:'border-indigo-400 bg-indigo-50 text-indigo-700',split:'border-orange-400 bg-orange-50 text-orange-700'};
+      btn.className+=' '+(colors[t]||'');
     } else {
       btn.className='w-full p-3.5 border-2 rounded-2xl font-bold text-left flex justify-between items-center transition-all text-xs bg-white border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600';
     }
   }
   if(badge)badge.style.display=(t===type)?'inline':'none';
 });
-document.getElementById('local-custom-fields').classList.toggle('hidden',type!=='custom')};
+document.getElementById('local-custom-fields').classList.toggle('hidden',type!=='custom'&&type!=='split');
+const splitFields=document.getElementById('local-split-extra');if(splitFields)splitFields.classList.toggle('hidden',type!=='split')};
 // ── CIERRES DE HORA — Añadir / Eliminar / Renderizar ────────────────────────
 window.addClosedHour=()=>{
   const from=document.getElementById('ch-from')?.value;
@@ -942,9 +1009,10 @@ if(configEntity==='global'){
       if(sd[selectedDayInModal]?.[emp.name]?._auto)delete sd[selectedDayInModal][emp.name];
     });
   } else {
-    const val=tmpLocal.type==='closed'
-      ?{type:'closed'}
-      :{type:'custom',start:document.getElementById('local-start').value,end:document.getElementById('local-end').value};
+    let val;
+    if(tmpLocal.type==='closed'){val={type:'closed'};}
+    else if(tmpLocal.type==='split'){val={type:'split',start:document.getElementById('local-start').value,end:document.getElementById('local-end').value,start2:document.getElementById('local-start2')?.value||'',end2:document.getElementById('local-end2')?.value||''};}
+    else{val={type:'custom',start:document.getElementById('local-start').value,end:document.getElementById('local-end').value};}
     sd[selectedDayInModal].global=val;
     // ── Propagar a todas las empleadas que NO tengan override manual ──────
     employeesDB.forEach(emp=>{
@@ -965,9 +1033,10 @@ if(configEntity==='global'){
       sd[selectedDayInModal][configEntity]={...globalVal,_auto:true};
     }
   } else {
-    const val=tmpLocal.type==='closed'
-      ?{type:'closed'}
-      :{type:'custom',start:document.getElementById('local-start').value,end:document.getElementById('local-end').value};
+    let val;
+    if(tmpLocal.type==='closed'){val={type:'closed'};}
+    else if(tmpLocal.type==='split'){val={type:'split',start:document.getElementById('local-start').value,end:document.getElementById('local-end').value,start2:document.getElementById('local-start2')?.value||'',end2:document.getElementById('local-end2')?.value||''};}
+    else{val={type:'custom',start:document.getElementById('local-start').value,end:document.getElementById('local-end').value};}
     // Sin _auto → es un override manual; no se sobreescribirá cuando cambie el global
     sd[selectedDayInModal][configEntity]=val;
   }
@@ -1000,6 +1069,211 @@ if(configEntity==='global'){
     console.error('❌ ERROR FATAL al guardar día:', e);
     alert('❌ ERROR AL GUARDAR:\n' + e.message + '\n\nRevisa la consola (F12) para ver el error completo.');
 }
+};
+
+// ---- RANGE MODAL (day range config) ----
+// ---- RANGES (Cierre por Días) ----
+let currentRangeStart = null;
+let currentRangeEnd = null;
+let currentRangeScope = 'global';
+let currentRangeType = 'closed';
+
+window.openRangeModal = (startDate, endDate) => {
+  currentRangeStart = startDate;
+  currentRangeEnd = endDate;
+  
+  const sd = new Date(startDate+'T12:00:00'), ed = new Date(endDate+'T12:00:00');
+  const nDays = Math.round((ed-sd)/(1000*60*60*24))+1;
+  
+  document.getElementById('range-modal-subtitle').innerText = `${startDate} → ${endDate} (${nDays} días)`;
+  
+  const empSelect = document.getElementById('range-emp-select');
+  if(empSelect) {
+    empSelect.innerHTML = employeesDB.map(e => `<option value="${e.name}">${esc(e.name)}</option>`).join('');
+  }
+  
+  window.selectRangeScope('global');
+  window.selectRangeType('closed');
+  
+  document.getElementById('range-modal').classList.remove('hidden');
+};
+
+window.closeRangeModal = () => document.getElementById('range-modal').classList.add('hidden');
+
+window.selectRangeScope = (scope) => {
+  currentRangeScope = scope;
+  const btnGlobal = document.getElementById('range-scope-global');
+  const btnEmp = document.getElementById('range-scope-emp');
+  const empSelectCont = document.getElementById('range-emp-select-container');
+  
+  if(scope === 'global') {
+    btnGlobal.style.backgroundColor = 'var(--green-deep)';
+    btnGlobal.style.color = 'white';
+    btnEmp.style.backgroundColor = 'transparent';
+    btnEmp.style.color = 'var(--brown)';
+    empSelectCont.classList.add('hidden');
+  } else {
+    btnEmp.style.backgroundColor = 'var(--green-deep)';
+    btnEmp.style.color = 'white';
+    btnGlobal.style.backgroundColor = 'transparent';
+    btnGlobal.style.color = 'var(--brown)';
+    empSelectCont.classList.remove('hidden');
+  }
+};
+
+window.selectRangeType = (type) => {
+  currentRangeType = type;
+  const btns = ['closed', 'custom', 'split', 'delete'];
+  btns.forEach(b => {
+    const el = document.getElementById('range-btn-' + (b==='closed'?'cerrado':b));
+    if(!el) return;
+    el.style.backgroundColor = b === type ? 'var(--cream)' : 'transparent';
+    el.style.borderColor = b === type ? 'var(--brown)' : 'var(--brown-light)';
+    if(b==='closed') el.style.borderColor = b === type ? 'var(--red)' : 'var(--red-light)';
+    if(b==='delete') el.style.borderColor = b === type ? 'var(--green-deep)' : 'var(--green-light)';
+  });
+  
+  const timeCont = document.getElementById('range-custom-times');
+  const splitCont = document.getElementById('range-split-times');
+  
+  timeCont.classList.toggle('hidden', type !== 'custom' && type !== 'split');
+  splitCont.classList.toggle('hidden', type !== 'split');
+};
+
+window.saveRangeConfig = async () => {
+  const entity = currentRangeScope === 'global' ? 'global' : document.getElementById('range-emp-select').value;
+  const type = currentRangeType;
+  
+  const customStart = document.getElementById('range-start').value || '09:00';
+  const customEnd = document.getElementById('range-end').value || '20:00';
+  const splitStart2 = document.getElementById('range-start2').value || '16:00';
+  const splitEnd2 = document.getElementById('range-end2').value || '20:00';
+  
+  let sd = { ...(config.specialDays || {}) };
+  const cur = new Date(currentRangeStart+'T12:00:00'), last = new Date(currentRangeEnd+'T12:00:00');
+  
+  while(cur <= last) {
+    const ds = getLD(cur);
+    if(!sd[ds]) sd[ds] = {};
+    let val;
+    
+    if(type === 'delete') {
+      delete sd[ds][entity];
+      if(entity === 'global') {
+        employeesDB.forEach(e => { if(sd[ds]?.[e.name]?._auto) delete sd[ds][e.name] });
+      }
+    } else {
+      if(type === 'closed') val = { type: 'closed' };
+      else if(type === 'split') val = { type: 'split', start: customStart, end: customEnd, start2: splitStart2, end2: splitEnd2 };
+      else val = { type: 'custom', start: customStart, end: customEnd };
+      
+      if(entity === 'global') {
+        sd[ds].global = val;
+        employeesDB.forEach(emp => {
+          const ex = sd[ds]?.[emp.name];
+          if(!ex || ex._auto) sd[ds][emp.name] = { ...val, _auto: true };
+        });
+      } else {
+        sd[ds][entity] = val;
+      }
+    }
+    
+    if(Object.keys(sd[ds]||{}).length === 0) delete sd[ds];
+    cur.setDate(cur.getDate()+1);
+  }
+  
+  try {
+    await updateDoc(doc(db,'artifacts',AID,'public','data','settings','main'), { specialDays: sd });
+    config.specialDays = sd;
+    alert('✅ Rango aplicado correctamente.');
+    window.closeRangeModal();
+    if(currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+  } catch(e) {
+    alert('❌ Error: ' + e.message);
+  }
+};
+
+// ---- BLOCKS (employee hour blocks) ----
+window.loadBlocksForDate=(dateStr,empName)=>{
+  const d=new Date(dateStr+'T12:00:00');
+  const weekday=d.getDay();
+  return blocksDB.filter(b=>{
+    if(b.employee!==empName)return false;
+    if(b.recurrenceEnd&&b.recurrenceEnd<dateStr)return false;
+    if(b.recurrence==='none')return b.date===dateStr;
+    if(b.recurrence==='daily')return true;
+    if(b.recurrence==='weekly')return b.weekday===weekday;
+    if(b.recurrence==='biweekly')return b.weekday===weekday;
+    return false;
+  });
+};
+window.saveBlock=async(blockData)=>{
+  blockData.createdAt=new Date().toISOString();
+  await addDoc(collection(db,'artifacts',AID,'public','data','blocks'),blockData);
+};
+window.deleteBlock=async(id)=>{
+  if(!confirm('¿Eliminar este bloqueo?'))return;
+  await deleteDoc(doc(db,'artifacts',AID,'public','data','blocks',id));
+};
+window.openBlockModal=(empName, defaultDate)=>{
+  document.getElementById('block-modal-emp').innerText = empName;
+  document.getElementById('block-emp-name').value = empName;
+  document.getElementById('block-date').value = defaultDate || getLD(new Date());
+  document.getElementById('block-recurrence').value = 'none';
+  
+  const d = new Date(defaultDate + 'T12:00:00');
+  const days = ['domingos','lunes','martes','miércoles','jueves','viernes','sábados'];
+  document.getElementById('block-recurrence-weekly').innerText = `Cada semana (los ${days[d.getDay()]})`;
+
+  let timeOptions = '';
+  for(let h=7; h<=22; h++) {
+    for(let m=0; m<60; m+=15) {
+      const t = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      timeOptions += `<option value="${t}">${t}</option>`;
+    }
+  }
+  document.getElementById('block-start').innerHTML = timeOptions;
+  document.getElementById('block-end').innerHTML = timeOptions;
+
+  window.toggleBlockRecurrenceEnd();
+  document.getElementById('block-modal').classList.remove('hidden');
+};
+
+window.toggleBlockRecurrenceEnd = () => {
+  const val = document.getElementById('block-recurrence').value;
+  const ef = document.getElementById('block-recurrence-end-container');
+  if(ef) ef.classList.toggle('hidden', val === 'none');
+};
+
+window.closeBlockModal = () => document.getElementById('block-modal').classList.add('hidden');
+
+window.saveBlockForm = async () => {
+  const emp = document.getElementById('block-emp-name').value;
+  const startTime = document.getElementById('block-start').value;
+  const endTime = document.getElementById('block-end').value;
+  const reason = document.getElementById('block-reason').value || 'Otro';
+  const recurrence = document.getElementById('block-recurrence').value;
+  const recurrenceEnd = document.getElementById('block-recurrence-end')?.value || null;
+  
+  if(t2m(startTime) >= t2m(endTime)) return alert('La hora inicio debe ser anterior al fin.');
+  
+  const block = { employee: emp, startTime, endTime, reason, recurrence };
+  
+  if(recurrence === 'none') {
+    block.date = document.getElementById('block-date').value;
+  } else {
+    block.weekday = new Date((document.getElementById('block-date').value || getLD(new Date())) + 'T12:00:00').getDay();
+  }
+  
+  if(recurrenceEnd && recurrence !== 'none') block.recurrenceEnd = recurrenceEnd;
+  
+  try {
+    await window.saveBlock(block);
+    window.closeBlockModal();
+    if(currentTab.startsWith('calendar_emp_')) window.renderSpecialistDayView();
+  } catch(e) {
+    alert('❌ Error: ' + e.message);
+  }
 };
 
 // ---- APPOINTMENT MODAL ----
@@ -1407,6 +1681,11 @@ window.renderSidebarEmployees();populateModalSelects();
 if(currentTab==='employees_mgmt')window.renderEmployeesMgmt();
 if(currentTab==='config'){setTimeout(()=>{window.renderConfigEntityTabs();window.renderStandardInputs();renderMonthGrid('config-calendar-body',true)},0)}
 if(currentTab.startsWith('calendar')){if(specialistViewLevel==='global-day')window.renderGlobalDay();else window.render();}});
+// Blocks
+onSnapshot(collection(db,'artifacts',AID,'public','data','blocks'),snap=>{
+  blocksDB=snap.docs.map(d=>({id:d.id,...d.data()}));
+  if(currentTab.startsWith('calendar_emp_')&&specialistViewLevel==='day')window.renderSpecialistDayView();
+});
 
 }catch(err){console.error("❌ ERROR CRÍTICO EN startListeners:",err)}};
 
