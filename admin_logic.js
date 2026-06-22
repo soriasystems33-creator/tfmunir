@@ -810,18 +810,29 @@ if(isConfig){
   };
 }else{
   const closed=dc.type==='closed';
+  let hasFullDayBlock = false;
+  if(empFilter) {
+    const bks = window.loadBlocksForDate(ds, empFilter);
+    hasFullDayBlock = bks.some(b => b.startTime === '00:00' && b.endTime === '23:59');
+  }
+
   let dayApts=appointments.filter(a=>a.date===ds);if(empFilter)dayApts=dayApts.filter(function(a){return empInApt(a,empFilter)});
   const active=dayApts.filter(a=>a.status!=='cancelled');const pend=active.filter(a=>a.status==='pending').length;
   
-  // La clase 'closed' ahora tiene prioridad visual
-  div.className=`calendar-day ${closed?'closed':''} ${isToday?'ring-2 ring-teal-500 bg-teal-50 shadow-md z-10':''}`;
-  
   const pi=pend>0?`<div class="absolute top-1 right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse shadow-sm border border-white"></div>`:'';
   
-  if(closed){
-    div.innerHTML=`<div class="font-black text-slate-400 relative flex items-center">${d}</div>
-                   <div class="text-[9px] text-red-500 font-black mt-2 uppercase tracking-tighter italic">🚫 Cerrado</div>`;
+  if(closed || hasFullDayBlock){
+    div.className=`calendar-day bg-slate-200/60 border-slate-300 flex flex-col ${isToday?'ring-2 ring-teal-500 z-10':''}`;
+    div.innerHTML=`
+      <div class="font-black text-slate-400 text-lg relative flex items-center">${d} ${pi}</div>
+      <div class="text-red-400 text-[10px] font-black uppercase italic flex items-center gap-1 mt-2">
+        <i data-lucide="ban" class="w-3 h-3"></i> CERRADO
+      </div>
+      <div class="flex-1"></div>
+      <div class="text-red-400 text-[10px] font-black uppercase text-center mb-1 tracking-widest">CERRADO</div>
+    `;
   } else {
+    div.className=`calendar-day ${isToday?'ring-2 ring-teal-500 bg-teal-50 shadow-md z-10':''}`;
     div.innerHTML=`<div class="font-black text-slate-700 relative flex items-center">${d} ${pi}</div>
                    <div class="text-[8px] text-blue-500 font-black mt-1 uppercase">${active.length} Citas</div>
                    <div class="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
