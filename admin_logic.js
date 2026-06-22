@@ -1870,6 +1870,18 @@ window.closeMultiDayModal = () => {
     setTimeout(() => document.getElementById('config-multi-day-modal').classList.add('hidden'), 200);
 };
 
+window.toggleCmdShiftType = () => {
+    const type = document.getElementById('cmd-shift-type').value;
+    const splitContainer = document.getElementById('cmd-split-container');
+    if(type === 'split') {
+        splitContainer.classList.remove('hidden');
+        splitContainer.classList.add('flex');
+    } else {
+        splitContainer.classList.add('hidden');
+        splitContainer.classList.remove('flex');
+    }
+};
+
 window.applyMultiDayConfig = async (action) => {
     const entity = document.getElementById('cmd-entity').value;
     const days = Array.from(selectedConfigDays);
@@ -1877,6 +1889,32 @@ window.applyMultiDayConfig = async (action) => {
     
     const up = { ...config };
     if(!up.specialDays) up.specialDays = {};
+    
+    let specialStart = "09:00", specialEnd = "20:00", specialClosedHours = [];
+    if(action === 'special') {
+        const type = document.getElementById('cmd-shift-type').value;
+        const s1 = document.getElementById('cmd-start-1').value || '09:00';
+        const e1 = document.getElementById('cmd-end-1').value || '14:00';
+        if(type === 'split') {
+            const s2 = document.getElementById('cmd-start-2').value || '16:00';
+            const e2 = document.getElementById('cmd-end-2').value || '20:00';
+            specialStart = s1;
+            specialEnd = e2;
+            
+            // Build closedHours every 15 min between e1 and s2
+            let ce = e1;
+            while(ce < s2) {
+                specialClosedHours.push(ce);
+                let m = parseInt(ce.split(':')[0], 10)*60 + parseInt(ce.split(':')[1], 10) + 15;
+                let h = Math.floor(m/60);
+                let mins = m%60;
+                ce = String(h).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
+            }
+        } else {
+            specialStart = s1;
+            specialEnd = e1;
+        }
+    }
     
     days.forEach(ds => {
         if(!up.specialDays[ds]) up.specialDays[ds] = {};
@@ -1887,7 +1925,13 @@ window.applyMultiDayConfig = async (action) => {
         } else if (action === 'closed') {
             up.specialDays[ds][entity] = { closed: true, type: 'closed' };
         } else if (action === 'special') {
-            up.specialDays[ds][entity] = { closed: false, type: 'custom', start: '09:00', end: '20:00' };
+            up.specialDays[ds][entity] = { 
+                closed: false, 
+                type: 'custom', 
+                start: specialStart, 
+                end: specialEnd,
+                closedHours: specialClosedHours 
+            };
         }
     });
     

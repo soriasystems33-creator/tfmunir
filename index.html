@@ -1099,7 +1099,7 @@
                 </div>
                 <button onclick="window.closeMultiDayModal()" class="p-2 hover:bg-orange-200/50 rounded-xl transition-colors text-orange-800"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <div class="p-6 space-y-3 bg-slate-50">
+            <div class="p-6 space-y-4 bg-slate-50 overflow-y-auto max-h-[75vh] custom-scroll">
                 <input type="hidden" id="cmd-entity" value="">
                 
                 <button onclick="window.applyMultiDayConfig('closed')" class="w-full flex flex-col items-center justify-center p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all group">
@@ -1110,6 +1110,37 @@
                     <span class="text-[10px] text-red-500 font-medium text-center mt-1">Marcar como no laborable / festivo</span>
                 </button>
 
+                <!-- Panel Horario Especial -->
+                <div class="border-2 border-indigo-200 bg-indigo-50/50 rounded-xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="clock" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="font-black text-indigo-700 uppercase tracking-widest text-xs">Horario Especial</span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <select id="cmd-shift-type" onchange="window.toggleCmdShiftType()" class="w-full p-2 border-2 border-indigo-100 rounded-xl font-bold text-xs bg-white text-indigo-900 outline-none">
+                            <option value="continuous">Jornada Continua</option>
+                            <option value="split">Jornada Partida</option>
+                        </select>
+                        
+                        <div class="flex items-center gap-2 text-xs font-bold text-indigo-800">
+                            <input type="time" id="cmd-start-1" value="09:00" class="flex-1 p-2 border border-indigo-200 rounded-lg bg-white outline-none">
+                            <span>-</span>
+                            <input type="time" id="cmd-end-1" value="14:00" class="flex-1 p-2 border border-indigo-200 rounded-lg bg-white outline-none">
+                        </div>
+                        
+                        <div id="cmd-split-container" class="hidden flex items-center gap-2 text-xs font-bold text-indigo-800 pt-1">
+                            <input type="time" id="cmd-start-2" value="16:00" class="flex-1 p-2 border border-indigo-200 rounded-lg bg-white outline-none">
+                            <span>-</span>
+                            <input type="time" id="cmd-end-2" value="20:00" class="flex-1 p-2 border border-indigo-200 rounded-lg bg-white outline-none">
+                        </div>
+                        
+                        <button onclick="window.applyMultiDayConfig('special')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-colors mt-2">
+                            Aplicar Horario
+                        </button>
+                    </div>
+                </div>
+
                 <div class="pt-4 border-t border-slate-200">
                     <button onclick="window.applyMultiDayConfig('reset')" class="w-full py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Restaurar a Normal
@@ -1119,6 +1150,6 @@
         </div>
     </div>
 
-    <script src="admin_logic.js?v=20260622_V10"></script>
+    <script src="admin_logic.js?v=20260622_V11"></script>
 </body>
 </html>
