@@ -614,12 +614,14 @@ if(empFilter){
       const blTopPx = (blStartM - sm2)/60*PX;
       const blHeightPx = Math.max((blEndM - blStartM)/60*PX - 2, 24);
       const recLabel = bl.recurrence==='daily'?'Diario':bl.recurrence==='weekly'?'Semanal':bl.recurrence==='biweekly'?'Bisemanal':'';
-      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}-${bl.endTime})${recLabel?' - '+recLabel:''}"
+      html+=`<div onclick="window.deleteBlock('${bl.id}')" title="Haga clic para eliminar. 🔒 ${esc(bl.reason)} (${bl.startTime}-${bl.endTime})${recLabel?' - '+recLabel:''}"
         style="position:absolute;top:${blTopPx}px;left:4px;right:4px;height:${blHeightPx}px;
           background:repeating-linear-gradient(135deg,#fff7ed,#fff7ed 8px,#ffedd5 8px,#ffedd5 16px);
           border-left:4px solid #f97316;border-radius:8px;
           padding:3px 8px;cursor:pointer;overflow:hidden;z-index:5;
-          box-shadow:0 2px 6px rgba(0,0,0,.04);">
+          box-shadow:0 2px 6px rgba(0,0,0,.04);"
+        onmouseover="this.style.boxShadow='0 4px 12px rgba(249,115,22,0.2)';this.style.transform='scaleX(1.02)'"
+        onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,.04)';this.style.transform=''">
         <div style="display:flex;align-items:center;gap:5px">
           <span style="font-size:11px;font-weight:900;font-family:monospace;color:#c2410c">${bl.startTime}</span>
           <span style="font-size:9px;color:#f97316;font-weight:bold">🔒 BLOQUEADO</span>
@@ -735,11 +737,12 @@ window.renderMultiEmpTimeline = (ds, dayApts, container) => {
       const sm2 = startH * 60;
       const blTopPx = (blStartM - sm2)/60*PX;
       const blHeightPx = Math.max((blEndM - blStartM)/60*PX - 2, 16);
-      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}-${bl.endTime})"
+      html+=`<div onclick="window.deleteBlock('${bl.id}')" title="Haga clic para eliminar. 🔒 ${esc(bl.reason)} (${bl.startTime}-${bl.endTime})"
         style="position:absolute;top:${blTopPx}px;left:2px;right:2px;height:${blHeightPx}px;
           background:repeating-linear-gradient(135deg,#fff7ed,#fff7ed 8px,#ffedd5 8px,#ffedd5 16px);
           border-left:3px solid #f97316;border-radius:6px;
-          padding:2px 4px;cursor:pointer;overflow:hidden;z-index:5;">
+          padding:2px 4px;cursor:pointer;overflow:hidden;z-index:5;transition:transform 0.1s;"
+        onmouseover="this.style.transform='scaleX(1.02)'" onmouseout="this.style.transform=''">
         <div style="font-size:9px;font-weight:900;color:#c2410c">${bl.startTime} 🔒</div>
       </div>`;
     });
