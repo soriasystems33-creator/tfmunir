@@ -1961,7 +1961,7 @@ window.applyMultiDayConfig = async (action) => {
     });
     
     try {
-        await setDoc(doc(db,'artifacts',AID,'public','data','settings','main'), up, { merge: true });
+        await updateDoc(doc(db,'artifacts',AID,'public','data','settings','main'), { specialDays: up.specialDays });
         window.closeMultiDayModal();
         window.clearConfigSelection();
         if (currentTab === 'config') renderMonthGrid('config-calendar-body', true);
