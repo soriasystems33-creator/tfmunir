@@ -318,10 +318,14 @@ try{
     // Horario del día
     const openStr  = dc.type==='closed'?'09:00':(dc.start||config.start||'09:00');
     const closeStr = dc.type==='closed'?'20:00':(dc.end  ||config.end  ||'20:00');
-    const startMin = t2m(openStr);
-    const endMin   = t2m(closeStr);
-    const startH   = Math.floor(startMin/60);
-    const endH     = Math.ceil(endMin/60);
+    const gStartH = parseInt(config.start||'09:00',10);
+    const gEndH = Math.ceil(parseInt(config.end||'20:00',10));
+    const eStartH = parseInt(openStr.split(':')[0],10);
+    const eEndH = Math.ceil(parseInt(closeStr.split(':')[0],10)+(parseInt(closeStr.split(':')[1]||'0',10)>0?1:0));
+    const startH = Math.min(gStartH, eStartH, 9);
+    const endH = Math.max(gEndH, eEndH, 20);
+    const startMin = startH * 60;
+    const endMin = endH * 60;
 
     const PX_PER_MIN = 1.2; // 72px por hora → 1.2px por minuto
     const HOUR_PX    = 60 * PX_PER_MIN;
@@ -574,6 +578,15 @@ if(empFilter){
       <div style="text-align:center"><div style="font-size:32px;margin-bottom:8px">🔒</div><p style="font-weight:700">Día cerrado</p></div>
     </div>`;
   } else {
+    // Determine bounds
+    const gStartH=parseInt(config.start||'09:00',10);
+    const gEndH=Math.ceil(parseInt(config.end||'20:00',10));
+    const eStartH=parseInt(openStr.split(':')[0],10);
+    const eEndH=Math.ceil(parseInt(closeStr.split(':')[0],10)+(parseInt(closeStr.split(':')[1]||'0',10)>0?1:0));
+    const startH=Math.min(gStartH,eStartH,9);
+    const endH=Math.max(gEndH,eEndH,20);
+    const totalPx=(endH-startH)*PX;
+
     // Google Calendar timeline
     html+=`<div style="display:flex;flex:1;overflow-y:auto">
       <div style="width:54px;flex-shrink:0;position:relative;height:${totalPx}px">`;
@@ -598,9 +611,32 @@ if(empFilter){
       }
     }
 
+    // Blocks
+    const empBlocks=window.loadBlocksForDate(ds,emp.name);
+    empBlocks.forEach(bl=>{
+      const blStartM = parseInt(bl.startTime.split(':')[0],10)*60 + parseInt(bl.startTime.split(':')[1],10);
+      const blEndM = parseInt(bl.endTime.split(':')[0],10)*60 + parseInt(bl.endTime.split(':')[1],10);
+      const sm2 = startH * 60;
+      const blTopPx = (blStartM - sm2)/60*PX;
+      const blHeightPx = Math.max((blEndM - blStartM)/60*PX - 2, 24);
+      const recLabel = bl.recurrence==='daily'?'Diario':bl.recurrence==='weekly'?'Semanal':bl.recurrence==='biweekly'?'Bisemanal':'';
+      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}-${bl.endTime})${recLabel?' - '+recLabel:''}"
+        style="position:absolute;top:${blTopPx}px;left:4px;right:4px;height:${blHeightPx}px;
+          background:repeating-linear-gradient(135deg,#fff7ed,#fff7ed 8px,#ffedd5 8px,#ffedd5 16px);
+          border-left:4px solid #f97316;border-radius:8px;
+          padding:3px 8px;cursor:pointer;overflow:hidden;z-index:5;
+          box-shadow:0 2px 6px rgba(0,0,0,.04);">
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="font-size:11px;font-weight:900;font-family:monospace;color:#c2410c">${bl.startTime}</span>
+          <span style="font-size:9px;color:#f97316;font-weight:bold">🔒 BLOQUEADO</span>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#c2410c;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(bl.reason)}</div>
+      </div>`;
+    });
+
     // Appointments
     empApts.forEach(apt=>{
-      const sm2=parseInt(openStr.split(':')[0],10)*60;
+      const sm2=startH*60;
       const aptM=parseInt((apt.time||'00:00').split(':')[0],10)*60+parseInt((apt.time||'00:00').split(':')[1]||'0',10);
       const dur=apt.duration||15;
       const topPx=(aptM-sm2)/60*PX;
