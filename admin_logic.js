@@ -1451,7 +1451,7 @@ window.confirmAddSvc=function(id){
   var s=getSvcById(id);if(!s)return;
   var emp=s.employee||(employeesDB.length>0?employeesDB[0].name:'');
   if(emp==='Todas'||emp==='Cualquiera')emp=employeesDB.length>0?employeesDB[0].name:'';
-  if(emp.includes(',')){var parts=emp.split(',').map(function(e){return e.trim()}).filter(Boolean);emp=parts.find(function(e){return e==='Camila'})||parts.find(function(e){return e==='Isabela'})||parts[0]}
+  if(emp.includes(',')){var parts=emp.split(',').map(function(e){return e.trim()}).filter(Boolean);emp=parts[0]}
   _aptSvcs.push({id:s.id,name:s.name,employee:emp,duration:s.duration||15,price:s.price||0});
   document.getElementById('m-svc-picker').classList.add('hidden');
   updateAptSvcSummary();
@@ -1541,7 +1541,7 @@ window.updateAvailability()};
 window.saveAppointment=async()=>{if(!selectedTime)return alert("Selecciona una hora.");
 if(_aptSvcs.length===0)return alert("Añade al menos un servicio.");
 var sName=_aptSvcs.map(function(s){return s.name}).join(' + ');
-var empStr=_aptSvcs.map(function(s){var e=s.employee||'';if(e.includes(',')){var parts=e.split(',').map(function(p){return p.trim()}).filter(Boolean);e=parts.find(function(p){return p==='Camila'})||parts.find(function(p){return p==='Isabela'})||parts[0]};return e}).filter(Boolean).join(', ');
+var empStr=_aptSvcs.map(function(s){var e=s.employee||'';if(e.includes(',')){var parts=e.split(',').map(function(p){return p.trim()}).filter(Boolean);e=parts[0]};return e}).filter(Boolean).join(', ');
 var sDur=_aptSvcs.reduce(function(sum,s){return sum+(s.duration||0)},0);
 var sPrice=parseFloat(document.getElementById('m-price').value)||0;
 var phone=document.getElementById('m-phone').value;window.cleanPhone(document.getElementById('m-phone'));phone=document.getElementById('m-phone').value;
@@ -1836,8 +1836,7 @@ window.toggleConfigDaySelection = (ds, forceSelect) => {
         else selectedConfigDays.add(ds);
     }
     
-    const cell = document.querySelector(`.calendar-day[data-ds="${ds}"]`);
-    if(cell) {
+    document.querySelectorAll(`.calendar-day[data-ds="${ds}"]`).forEach(cell => {
         if(selectedConfigDays.has(ds)) {
             cell.style.boxShadow = "inset 0 0 0 4px #f97316";
             cell.style.backgroundColor = "#fff7ed";
@@ -1845,7 +1844,7 @@ window.toggleConfigDaySelection = (ds, forceSelect) => {
             cell.style.boxShadow = "";
             cell.style.backgroundColor = "";
         }
-    }
+    });
     window.updateConfigMultiActionBar();
 };
 
@@ -2027,11 +2026,14 @@ onSnapshot(collection(db,'artifacts',AID,'public','data','expenses'),snap=>{
 onSnapshot(collection(db,'artifacts',AID,'public','data','categories'),snap=>{categoriesDB=snap.docs.map(d=>({id:d.id,...d.data()}));
 if(currentTab==='services_mgmt')window.renderServicesMgmt()});
 // Employees
-onSnapshot(collection(db,'artifacts',AID,'public','data','employees'),snap=>{employeesDB=snap.docs.map(d=>({id:d.id,...d.data()}));
-window.renderSidebarEmployees();populateModalSelects();
-if(currentTab==='employees_mgmt')window.renderEmployeesMgmt();
-if(currentTab==='config'){setTimeout(()=>{window.renderConfigEntityTabs();window.renderStandardInputs();renderMonthGrid('config-calendar-body',true)},0)}
-if(currentTab.startsWith('calendar')){if(specialistViewLevel==='global-day')window.renderGlobalDay();else window.render();}});
+onSnapshot(collection(db,'artifacts',AID,'public','data','employees'),snap=>{
+    employeesDB=snap.docs.map(d=>({id:d.id,...d.data()}));
+    window.renderSidebarEmployees();
+    populateModalSelects();
+    if(currentTab==='employees_mgmt')window.renderEmployeesMgmt();
+    if(currentTab==='config'){window.renderConfigEntityTabs();window.renderStandardInputs();renderMonthGrid('config-calendar-body',true);}
+    if(currentTab.startsWith('calendar')){if(specialistViewLevel==='global-day')window.renderGlobalDay();else window.render();}
+});
 // Blocks
 onSnapshot(collection(db,'artifacts',AID,'public','data','blocks'),snap=>{
   blocksDB=snap.docs.map(d=>({id:d.id,...d.data()}));
