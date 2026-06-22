@@ -1089,6 +1089,36 @@
         </div>
     </div>
 
-    <script src="admin_logic.js?v=20260622_V9"></script>
+    <!-- MODAL MULTI CONFIG DÍAS -->
+    <div id="config-multi-day-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white rounded-3xl w-full max-w-sm flex flex-col shadow-2xl overflow-hidden" style="border:1px solid var(--brown-light)">
+            <div class="p-5 border-b bg-orange-50 flex justify-between items-center" style="border-color:var(--brown-light)">
+                <div>
+                    <h3 id="cmd-title" class="font-black text-lg text-orange-900">Configurar X días</h3>
+                    <p id="cmd-subtitle" class="text-xs font-bold text-orange-600 uppercase tracking-widest mt-1">Global</p>
+                </div>
+                <button onclick="window.closeMultiDayModal()" class="p-2 hover:bg-orange-200/50 rounded-xl transition-colors text-orange-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6 space-y-3 bg-slate-50">
+                <input type="hidden" id="cmd-entity" value="">
+                
+                <button onclick="window.applyMultiDayConfig('closed')" class="w-full flex flex-col items-center justify-center p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all group">
+                    <div class="w-10 h-10 rounded-full bg-red-200 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <i data-lucide="ban" class="w-5 h-5 text-red-600"></i>
+                    </div>
+                    <span class="font-black text-red-700 uppercase tracking-widest text-sm">Cerrar Días</span>
+                    <span class="text-[10px] text-red-500 font-medium text-center mt-1">Marcar como no laborable / festivo</span>
+                </button>
+
+                <div class="pt-4 border-t border-slate-200">
+                    <button onclick="window.applyMultiDayConfig('reset')" class="w-full py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Restaurar a Normal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin_logic.js?v=20260622_V10"></script>
 </body>
 </html>

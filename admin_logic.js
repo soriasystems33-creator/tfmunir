@@ -864,7 +864,10 @@ if(isConfig){
   }
 }
 div.setAttribute('data-ds', ds);
-if(selectedConfigDays.has(ds)) div.classList.add('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50');
+if(selectedConfigDays.has(ds)) {
+    div.style.boxShadow = "inset 0 0 0 4px #f97316";
+    div.style.backgroundColor = "#fff7ed";
+}
 frag.appendChild(div)}body.appendChild(frag);if(window.lucide)lucide.createIcons()}catch(err){console.error("❌ ERROR CRÍTICO EN renderMonthGrid:",err)}};
 
 // ---- RENDER MAIN ----
@@ -977,7 +980,7 @@ lucide.createIcons()};
 // ---- CONFIG ----
 window.renderConfigEntityTabs=()=>{const c=document.getElementById('config-entity-tabs');if(!c)return;
 let html=`<button onclick="window.setConfigEntity('global')" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity==='global'?'bg-white shadow-sm':'text-slate-400 hover:bg-slate-200'}">GLOBAL</button>`;
-employees.forEach(e=>{
+employeesDB.forEach(e=>{
     html+=`<button onclick="window.setConfigEntity('${e.name}')" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity===e.name?'bg-white shadow-sm':'text-slate-400 hover:bg-slate-200'}">${e.name}</button>`;
 });
 c.innerHTML=html;
@@ -1811,9 +1814,11 @@ window.toggleConfigDaySelection = (ds, forceSelect) => {
     const cell = document.querySelector(`.calendar-day[data-ds="${ds}"]`);
     if(cell) {
         if(selectedConfigDays.has(ds)) {
-            cell.classList.add('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50');
+            cell.style.boxShadow = "inset 0 0 0 4px #f97316";
+            cell.style.backgroundColor = "#fff7ed";
         } else {
-            cell.classList.remove('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50');
+            cell.style.boxShadow = "";
+            cell.style.backgroundColor = "";
         }
     }
     window.updateConfigMultiActionBar();
@@ -1843,7 +1848,10 @@ window.updateConfigMultiActionBar = () => {
 
 window.clearConfigSelection = () => {
     selectedConfigDays.clear();
-    document.querySelectorAll('.calendar-day').forEach(el => el.classList.remove('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50'));
+    document.querySelectorAll('.calendar-day').forEach(el => {
+        el.style.boxShadow = "";
+        el.style.backgroundColor = "";
+    });
     window.updateConfigMultiActionBar();
 };
 
