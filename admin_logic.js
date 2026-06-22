@@ -557,10 +557,16 @@ if(empFilter){
       <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:99px;background:#f0ebe6;color:#7a6b67">${openStr} – ${closeStr}</span>
       <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;color:white;background:${empColor}">${empApts.length} citas</span>
     </div>
-    <button onclick="window.closeDayModal();window.openNewAptForDay('${ds}','${emp.name.replace(/'/g,"\\'")}');"
-      style="background:${empColor};color:white;border:none;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">
-      + Nueva cita
-    </button>
+    <div style="display:flex;gap:8px">
+      <button onclick="window.closeDayModal();window.openBlockModal('${emp.name.replace(/'/g,"\\'")}','${ds}')"
+        style="background:#f97316;color:white;border:none;padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer">
+        🔒 Bloquear
+      </button>
+      <button onclick="window.closeDayModal();window.openNewAptForDay('${ds}','${emp.name.replace(/'/g,"\\'")}');"
+        style="background:${empColor};color:white;border:none;padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer">
+        + Nueva cita
+      </button>
+    </div>
   </div>`;
 
   if(dc.type==='closed'){
@@ -814,7 +820,7 @@ lucide.createIcons()};
 // ---- CONFIG ----
 window.renderConfigEntityTabs=()=>{const c=document.getElementById('config-entity-tabs');if(!c)return;
 c.innerHTML=`<button onclick="window.setConfigEntity('global')" id="entity-global" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity==='global'?'config-selected bg-white':'text-slate-400'}">Global</button>`;
-employeesDB.forEach(e=>{c.innerHTML+=`<button onclick="window.setConfigEntity('${e.name}')" id="entity-${e.name}" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity===e.name?'config-selected bg-white':'text-slate-400'}">${e.name}</button>`})};
+};
 window.setConfigEntity=e=>{configEntity=e;window.renderStandardInputs();window.renderConfigEntityTabs();renderMonthGrid('config-calendar-body',true)};
 window.renderStandardInputs=()=>{const c=document.getElementById('standard-inputs-container');if(!c)return;
 if(!config)config={start:'09:00',end:'20:00',specialDays:{}};
