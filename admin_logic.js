@@ -44,7 +44,7 @@ const esc=s=>typeof s!=='string'?s:s.replace(/&/g,"&amp;").replace(/</g,"&lt;").
 const statusColors={'pending':'bg-yellow-100 border-yellow-300 text-yellow-800','confirmed':'bg-blue-100 border-blue-300 text-blue-800','completed':'bg-green-100 border-green-300 text-green-800','cancelled':'bg-red-100 border-red-300 text-red-800 opacity-60'};
 const setStatus=(s,t)=>{const d=document.getElementById('status-dot');if(d)d.className=`w-2.5 h-2.5 rounded-full ${s==='ok'?'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]':s==='loading'?'bg-yellow-400 animate-pulse':'bg-red-500'}`;const l=document.getElementById('status-text');if(l)l.innerText=t};
 const compressImage=f=>new Promise(r=>{const rd=new FileReader();rd.readAsDataURL(f);rd.onload=e=>{const img=new Image();img.src=e.target.result;img.onload=()=>{const c=document.createElement('canvas');const s=300/img.width;c.width=300;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',0.7))}}});
-const WEBHOOK_URL=null; // Pendiente de configurar en TFM
+const WEBHOOK_URL="http://localhost:5678/webhook/89e879ec-9e37-483e-b73e-2a15ba04ded6"; // Cambia localhost:5678 por tu dominio de n8n si está en la nube
 const notifyWebhook=(event,data)=>{if(!WEBHOOK_URL){console.log('[webhook-tfm] Pendiente de configurar:',event);return;}try{fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,...data})})}catch(e){console.error('[webhook]',e)}};
 const getEmpById=id=>employeesDB.find(e=>e.id===id);
 const getEmpByName=name=>employeesDB.find(e=>e.name===name);
