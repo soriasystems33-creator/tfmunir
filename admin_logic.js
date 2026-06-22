@@ -71,6 +71,10 @@ else{d.createdAt=new Date().toISOString();await addDoc(collection(db,'artifacts'
 document.getElementById('service-modal').classList.add('hidden')};
 window.deleteService=async id=>{if(!confirm('¿Eliminar este servicio?'))return;await deleteDoc(doc(db,'artifacts',AID,'public','data','services',id))};
 let editingCategoryId=null;
+let selectedConfigDays = new Set();
+let isDraggingSelect = false;
+let dragSelectMode = true; // true to select, false to unselect
+let isConfigMode = false;
 const ICONS=['sparkles','scissors','palette','eye','wand-2','heart','star','sun','moon','droplets','flame','snowflake','feather','flower-2','gem','shield','crown','target','zap','shield-check','medal','award','trophy','smile','frown','meh','thumbs-up','thumbs-down','check','x','plus','minus','search','eye-off','bell','bell-off','clock','calendar','calendar-check','calendar-x','calendar-plus','calendar-days','map-pin','map','phone','mail','message-circle','message-square','send','share-2','home','menu','settings','user','users','user-plus','user-check','user-x','user-cog','user-minus','camera','image','video','film','music','volume-2','volume-x','headphones','play','pause','skip-forward','skip-back','shuffle','repeat','refresh-cw','undo','redo','rotate-cw','rotate-ccw','download','upload','cloud','cloud-rain','cloud-snow','cloud-lightning','wind','umbrella','sunrise','sunset','tool','wrench','hammer','trash-2','edit-3','copy','clipboard','clipboard-check','clipboard-x','save','file','file-text','folder','folder-plus','folder-minus','tag','tags','bookmark','bookmark-check','bookmark-x','briefcase','shopping-cart','shopping-bag','credit-card','banknote','dollar-sign','euro','trending-up','trending-down','bar-chart-3','pie-chart','activity','sliders','list','grid-3x3','layout','columns','rows','inbox','archive','package','box','layers','paintbrush','pencil','eraser','highlighter','palette','swatch-book','cone','cigarette','utensils','cup-soda','coffee','beer','wine','cake','cookie','candy','pizza','apple','orange','banana','cherry','nut','sandwich','salad','chef-hat','microwave-oven','refrigerator-2','washing-machine','tv','laptop','smartphone','tablet','watch','glasses','contact','bluetooth','wifi','plus-circle','x-circle','check-circle','info','alert-triangle','alert-circle','alert-octagon','help-circle','external-link','lock','unlock','fingerprint','key','rocket','plane','car','bus','bike','truck','train','ship','walking','running','airplay'];
 window.openCategoryModal=(id=null)=>{editingCategoryId=id;document.getElementById('category-modal').classList.remove('hidden');const t=document.querySelector('#category-modal h3');if(t)t.innerText=id?'Editar Categoría':'Nueva Categoría';if(id){const c=categoriesDB.find(cat=>cat.id===id);if(c){document.getElementById('cat-name').value=c.name;var icon=c.icon||'sparkles';document.getElementById('cat-icon').value=icon;document.getElementById('cat-icon-preview').innerHTML='<i data-lucide="'+icon+'" class="w-5 h-5"></i>';if(window.lucide)lucide.createIcons();}}else{document.getElementById('cat-name').value='';var defIcon='sparkles';document.getElementById('cat-icon').value=defIcon;document.getElementById('cat-icon-preview').innerHTML='<i data-lucide="'+defIcon+'" class="w-5 h-5"></i>';if(window.lucide)lucide.createIcons();}};
 window.openIconPicker=()=>{const grid=document.getElementById('icon-picker-grid');if(!grid)return;document.getElementById('icon-picker-modal').classList.remove('hidden');grid.innerHTML=ICONS.map(ic=>'<div class="flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer border-2 border-transparent hover:border-[var(--blue-deep)] hover:bg-[var(--cream)] transition-all" onclick="window.selectIcon(\''+ic+'\')"><i data-lucide="'+ic+'" class="w-5 h-5" style="color:var(--brown)"></i><span class="text-[6px] font-bold truncate w-full text-center" style="color:var(--brown-mid)">'+ic+'</span></div>').join('');if(window.lucide)setTimeout(()=>lucide.createIcons(),50)};
@@ -788,7 +792,7 @@ const dim=new Date(y,mo+1,0).getDate();const frag=document.createDocumentFragmen
 let empFilter=null;if(currentTab.startsWith('calendar_emp_')){const eid=currentTab.replace('calendar_emp_','');const emp=getEmpById(eid);if(emp)empFilter=emp.name}
 console.log(`renderMonthGrid: Rendering ${dim} days for ${cid}, config=${isConfig}, empFilter=${empFilter}, month=${mo+1}/${y}`);
 for(let d=1;d<=dim;d++){const ds=`${y}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-let entity='global';if(isConfig)entity=configEntity;else if(empFilter)entity=empFilter;
+let entity='global';if(isConfig)entity='global';else if(empFilter)entity=empFilter;
 const dc=getDailyConfig(ds,entity);
 const isToday=d===today.getDate()&&mo===today.getMonth()&&y===today.getFullYear();
 const div=document.createElement('div');
@@ -805,8 +809,14 @@ if(isConfig){
   else icon='<i data-lucide="unlock" class="w-3 h-3 text-slate-200"></i>';
   const chBadge=hasClosedHours?`<div class="text-[7px] font-black mt-1 uppercase" style="color:var(--rose)">⏰ ${config.specialDays[ds].closedHours.length} cierre${config.specialDays[ds].closedHours.length>1?'s':''}</div>`:'';
   div.innerHTML=`<div class="flex justify-between font-black"><span class="${isAuto?'text-slate-400':''}">${d}</span>${icon}</div>${isAuto?'<div class="text-[7px] text-indigo-300 font-bold mt-1 uppercase">↑ Global</div>':''}${chBadge}`;
-  div.onclick=()=>{
-    window.openConfigDay(ds);
+  
+  div.onmousedown = () => {
+    isDraggingSelect = true;
+    dragSelectMode = !selectedConfigDays.has(ds);
+    window.toggleConfigDaySelection(ds, dragSelectMode);
+  };
+  div.onmouseenter = () => {
+    if(isDraggingSelect) window.toggleConfigDaySelection(ds, dragSelectMode);
   };
 }else{
   const closed=dc.type==='closed';
@@ -839,8 +849,22 @@ if(isConfig){
                      <div class="h-full bg-blue-500 transition-all" style="width:${Math.min(100,active.length*15)}%"></div>
                    </div>`;
   }
-  div.onclick=()=>window.openDayModal(ds, empFilter);
+  
+  if (isConfigMode) {
+    div.onmousedown = () => {
+      isDraggingSelect = true;
+      dragSelectMode = !selectedConfigDays.has(ds);
+      window.toggleConfigDaySelection(ds, dragSelectMode);
+    };
+    div.onmouseenter = () => {
+      if(isDraggingSelect) window.toggleConfigDaySelection(ds, dragSelectMode);
+    };
+  } else {
+    div.onclick=()=>window.openDayModal(ds, empFilter);
+  }
 }
+div.setAttribute('data-ds', ds);
+if(selectedConfigDays.has(ds)) div.classList.add('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50');
 frag.appendChild(div)}body.appendChild(frag);if(window.lucide)lucide.createIcons()}catch(err){console.error("❌ ERROR CRÍTICO EN renderMonthGrid:",err)}};
 
 // ---- RENDER MAIN ----
@@ -855,6 +879,19 @@ else if(currentTab==='clients'){title.innerText="Clientes"}
 else if(currentTab==='config'){title.innerText="Configuración";label.innerText=`${months[currentViewDate.getMonth()]} ${currentViewDate.getFullYear()}`;renderMonthGrid('config-calendar-body',true)}
 else if(currentTab==='services_mgmt'){title.innerText="Servicios"}
 else if(currentTab==='employees_mgmt'){title.innerText="Empleados"}
+
+const btnConfig = document.getElementById('btn-toggle-config-mode');
+if(btnConfig) {
+    if(currentTab.startsWith('calendar_emp_') && specialistViewLevel === 'month') {
+        btnConfig.classList.remove('hidden');
+        btnConfig.classList.add('flex');
+    } else {
+        btnConfig.classList.add('hidden');
+        btnConfig.classList.remove('flex');
+        if(isConfigMode) window.toggleEmpConfigMode();
+    }
+}
+
 if(window.lucide)lucide.createIcons()}catch(err){console.error("❌ ERROR CRÍTICO EN window.render():",err)}};
 
 // ---- APPOINTMENT LIST ----
@@ -1756,6 +1793,128 @@ window.viewAppointment = function(id) {
     document.body.appendChild(overlay);
     if(window.lucide) lucide.createIcons();
 };
+
+// --- MULTI SELECT LOGIC ---
+window.toggleConfigDaySelection = (ds, forceSelect) => {
+    if (forceSelect !== undefined) {
+        if (forceSelect) selectedConfigDays.add(ds);
+        else selectedConfigDays.delete(ds);
+    } else {
+        if (selectedConfigDays.has(ds)) selectedConfigDays.delete(ds);
+        else selectedConfigDays.add(ds);
+    }
+    
+    const cell = document.querySelector(`.calendar-day[data-ds="${ds}"]`);
+    if(cell) {
+        if(selectedConfigDays.has(ds)) {
+            cell.classList.add('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50');
+        } else {
+            cell.classList.remove('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50');
+        }
+    }
+    window.updateConfigMultiActionBar();
+};
+
+window.updateConfigMultiActionBar = () => {
+    let bar = document.getElementById('config-multi-action-bar');
+    if(!bar) {
+        bar = document.createElement('div');
+        bar.id = 'config-multi-action-bar';
+        bar.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-4 rounded-2xl shadow-2xl z-[100] flex items-center gap-4 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none';
+        document.body.appendChild(bar);
+    }
+    
+    if(selectedConfigDays.size > 0) {
+        bar.innerHTML = `
+            <span class="font-bold">${selectedConfigDays.size} días</span>
+            <button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>
+            <button onclick="window.clearConfigSelection()" class="p-2 hover:bg-slate-700 rounded-xl transition-colors pointer-events-auto" title="Cancelar selección"><i data-lucide="x" class="w-4 h-4"></i></button>
+        `;
+        if(window.lucide) window.lucide.createIcons();
+        bar.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+    } else {
+        bar.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+    }
+};
+
+window.clearConfigSelection = () => {
+    selectedConfigDays.clear();
+    document.querySelectorAll('.calendar-day').forEach(el => el.classList.remove('ring-4', 'ring-orange-400', 'ring-inset', 'bg-orange-50'));
+    window.updateConfigMultiActionBar();
+};
+
+window.openMultiDayModal = () => {
+    document.getElementById('config-multi-day-modal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('config-multi-day-modal').classList.remove('opacity-0'), 10);
+    const entity = (currentTab === 'config') ? 'global' : currentTab.replace('calendar_emp_', '');
+    document.getElementById('cmd-entity').value = entity;
+    document.getElementById('cmd-title').innerText = `Configurar ${selectedConfigDays.size} días`;
+    const empName = entity === 'global' ? 'Global' : (getEmpById(entity)?.name || entity);
+    document.getElementById('cmd-subtitle').innerText = empName;
+};
+
+window.closeMultiDayModal = () => {
+    document.getElementById('config-multi-day-modal').classList.add('opacity-0');
+    setTimeout(() => document.getElementById('config-multi-day-modal').classList.add('hidden'), 200);
+};
+
+window.applyMultiDayConfig = async (action) => {
+    const entity = document.getElementById('cmd-entity').value;
+    const days = Array.from(selectedConfigDays);
+    if(days.length === 0) return;
+    
+    const up = { ...config };
+    if(!up.specialDays) up.specialDays = {};
+    
+    days.forEach(ds => {
+        if(!up.specialDays[ds]) up.specialDays[ds] = {};
+        
+        if (action === 'reset') {
+            delete up.specialDays[ds][entity];
+            if(Object.keys(up.specialDays[ds]).length === 0) delete up.specialDays[ds];
+        } else if (action === 'closed') {
+            up.specialDays[ds][entity] = { closed: true, type: 'closed' };
+        } else if (action === 'special') {
+            up.specialDays[ds][entity] = { closed: false, type: 'custom', start: '09:00', end: '20:00' };
+        }
+    });
+    
+    try {
+        await setDoc(doc(db,'artifacts',AID,'public','data','settings','main'), up, { merge: true });
+        window.closeMultiDayModal();
+        window.clearConfigSelection();
+        if (currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+        else if (currentTab.startsWith('calendar_emp_')) renderMonthGrid('calendar-body', false);
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+};
+
+document.addEventListener('mouseup', () => { isDraggingSelect = false; });
+
+window.toggleEmpConfigMode = () => {
+    isConfigMode = !isConfigMode;
+    const btn = document.getElementById('btn-toggle-config-mode');
+    const calBody = document.getElementById('calendar-body');
+    if(isConfigMode) {
+        btn.classList.replace('bg-orange-100', 'bg-orange-500');
+        btn.classList.replace('text-orange-700', 'text-white');
+        btn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i> Finalizar Configuración';
+        calBody.classList.add('ring-4', 'ring-orange-200');
+        selectedConfigDays.clear();
+        window.updateConfigMultiActionBar();
+    } else {
+        btn.classList.replace('bg-orange-500', 'bg-orange-100');
+        btn.classList.replace('text-white', 'text-orange-700');
+        btn.innerHTML = '<i data-lucide="settings" class="w-4 h-4"></i> Configurar Días Libres';
+        calBody.classList.remove('ring-4', 'ring-orange-200');
+        selectedConfigDays.clear();
+        window.updateConfigMultiActionBar();
+    }
+    if(window.lucide) window.lucide.createIcons();
+    renderMonthGrid('calendar-body', false);
+};
+
 
 const startListeners=()=>{try{console.log("🛠️ startListeners() iniciando...");
 iniciarEscuchaNotificacionesWeb();
