@@ -976,7 +976,11 @@ lucide.createIcons()};
 
 // ---- CONFIG ----
 window.renderConfigEntityTabs=()=>{const c=document.getElementById('config-entity-tabs');if(!c)return;
-c.innerHTML=`<button onclick="window.setConfigEntity('global')" id="entity-global" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity==='global'?'config-selected bg-white':'text-slate-400'}">Global</button>`;
+let html=`<button onclick="window.setConfigEntity('global')" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity==='global'?'bg-white shadow-sm':'text-slate-400 hover:bg-slate-200'}">GLOBAL</button>`;
+employees.forEach(e=>{
+    html+=`<button onclick="window.setConfigEntity('${e.name}')" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity===e.name?'bg-white shadow-sm':'text-slate-400 hover:bg-slate-200'}">${e.name}</button>`;
+});
+c.innerHTML=html;
 };
 window.setConfigEntity=e=>{configEntity=e;window.renderStandardInputs();window.renderConfigEntityTabs();renderMonthGrid('config-calendar-body',true)};
 window.renderStandardInputs=()=>{const c=document.getElementById('standard-inputs-container');if(!c)return;
