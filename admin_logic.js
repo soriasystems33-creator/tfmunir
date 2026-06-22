@@ -899,23 +899,10 @@ window.openConfigDay=ds=>{
     if(window.lucide)lucide.createIcons();
   }
 
-  // Poblar selector de entidad para cierres de hora
-  const chEntity=document.getElementById('ch-entity');
-  if(chEntity){
-    chEntity.innerHTML='<option value="global">🏢 Todo el Local (Global)</option>';
-    employeesDB.forEach(e=>{
-      chEntity.innerHTML+=`<option value="${e.name}">👤 ${esc(e.name)}</option>`;
-    });
-  }
-
   document.getElementById('config-day-title').innerText=`Personalizar: ${ds}`;
   document.getElementById('local-start').value=tmpLocal.start||config.start||"09:00";
   document.getElementById('local-end').value=tmpLocal.end||config.end||"20:00";
-  // Reset hour closure form
-  const chFrom=document.getElementById('ch-from');if(chFrom)chFrom.value='';
-  const chTo=document.getElementById('ch-to');if(chTo)chTo.value='';
   window.setLocalConfigType(tmpLocal.type);
-  window.renderClosedHoursList();
   document.getElementById('config-day-modal').classList.remove('hidden');
   if(window.lucide)lucide.createIcons();
 };
@@ -937,57 +924,13 @@ window.setLocalConfigType=type=>{tmpLocal.type=type;
 document.getElementById('local-custom-fields').classList.toggle('hidden',type!=='custom'&&type!=='split');
 const splitFields=document.getElementById('local-split-extra');if(splitFields)splitFields.classList.toggle('hidden',type!=='split')};
 // ── CIERRES DE HORA — Añadir / Eliminar / Renderizar ────────────────────────
-window.addClosedHour=()=>{
-  const from=document.getElementById('ch-from')?.value;
-  const to=document.getElementById('ch-to')?.value;
-  const entity=document.getElementById('ch-entity')?.value||'global';
-  if(!from||!to)return alert('Selecciona hora de inicio y fin.');
-  if(t2m(from)>=t2m(to))return alert('La hora de inicio debe ser anterior a la de fin.');
-  // Comprobar que no se solape con otro cierre existente para la misma entidad
-  const overlap=tmpClosedHours.some(ch=>ch.entity===entity&&t2m(from)<t2m(ch.to)&&t2m(to)>t2m(ch.from));
-  if(overlap)return alert('Ya existe un cierre de hora que se solapa con ese rango para esa entidad.');
-  tmpClosedHours.push({from,to,entity});
-  window.renderClosedHoursList();
-  // Reset form
-  document.getElementById('ch-from').value='';
-  document.getElementById('ch-to').value='';
-};
-window.removeClosedHour=idx=>{
-  tmpClosedHours.splice(idx,1);
-  window.renderClosedHoursList();
-};
-window.renderClosedHoursList=()=>{
-  const c=document.getElementById('closed-hours-list');
-  const badge=document.getElementById('block-count-badge');
-  if(!c)return;
-  if(tmpClosedHours.length===0){
-    c.innerHTML='<p class="text-[10px] italic text-center py-3" style="color:var(--brown-light)">Sin bloqueos — el horario completo está disponible</p>';
-    if(badge){badge.innerText='0';badge.style.background='#f1f5f9';badge.style.color='#94a3b8'}
-    return;
-  }
-  if(badge){badge.innerText=tmpClosedHours.length;badge.style.background='#fef2f2';badge.style.color='var(--rose)'}
-  c.innerHTML=tmpClosedHours.map((ch,i)=>{
-    const entityLabel=ch.entity==='global'?'🏢 Todo el local':'👤 '+esc(ch.entity);
-    const bgColor=ch.entity==='global'?'background:#fef2f2;border-color:#fecdd3':'background:#f0f4ff;border-color:#c7d2fe';
-    return `<div class="flex items-center justify-between p-3 rounded-xl border text-xs font-bold" style="${bgColor}">
-      <div class="flex items-center gap-2.5">
-        <span class="font-black text-xs" style="color:var(--brown)">⏰ ${ch.from} – ${ch.to}</span>
-        <span class="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase" style="background:white;color:var(--brown-mid)">${entityLabel}</span>
-      </div>
-      <button onclick="window.removeClosedHour(${i})" class="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-red-100" style="color:#ef4444">
-        <i data-lucide="x" class="w-3 h-3"></i>
-      </button>
-    </div>`;
-  }).join('');
-  if(window.lucide)lucide.createIcons();
-};
+window.addClosedHour=()=>{};
+window.removeClosedHour=()=>{};
+window.renderClosedHoursList=()=>{};
 
 // ── Obtener cierres de hora aplicables para un día y entidad ──────────────
 window.getClosedHoursForDay=(dateStr, entity)=>{
-  const ch=config.specialDays?.[dateStr]?.closedHours;
-  if(!ch||!Array.isArray(ch)||ch.length===0)return[];
-  // Devolver cierres globales + cierres específicos de esta entidad
-  return ch.filter(h=>h.entity==='global'||h.entity===entity);
+  return [];
 };
 
 window.saveConfigDay=async()=>{try{
@@ -1036,12 +979,7 @@ if(configEntity==='global'){
   }
 }
 
-    // ── Guardar cierres de hora ───────────────────────────────────────────
-    if(tmpClosedHours.length>0){
-      sd[selectedDayInModal].closedHours=tmpClosedHours.map(ch=>({from:ch.from,to:ch.to,entity:ch.entity}));
-    } else {
-      delete sd[selectedDayInModal].closedHours;
-    }
+    // closedHours ya no se gestionan aquí (se usan blocks por especialista)
 
     // Limpiar día si está completamente vacío
     const dayKeys=Object.keys(sd[selectedDayInModal]||{});
