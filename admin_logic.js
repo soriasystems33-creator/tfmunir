@@ -823,9 +823,9 @@ const days=[{id:1,name:'Lunes'},{id:2,name:'Martes'},{id:3,name:'Miércoles'},{i
 let cw=config.weekly,title="Horario GLOBAL del Centro",bg="bg-slate-100";
 if(configEntity!=='global'){const key=`weekly_${configEntity}`;if(!config[key])config[key]={};cw=config[key];title=`Horario: ${configEntity}`;bg="bg-purple-50"}
 let html=`<div class="col-span-full mb-4 space-y-4"><div class="${bg} p-4 rounded-2xl border-2 text-center"><h3 class="font-black text-slate-700 uppercase">${title}</h3></div></div><div class="col-span-1 md:col-span-2 space-y-3">`;
-days.forEach(d=>{let ds='09:00',de='20:00',ds2='13:00',de2='15:00',closed=false,type='complete';
-if(configEntity!=='global'&&!cw[d.id]){const gd=config.weekly[d.id]||{start:'09:00',end:'20:00',closed:false,type:'complete'};ds=gd.start;de=gd.end;closed=gd.closed;type=gd.type||'complete';ds2=gd.start2||'13:00';de2=gd.end2||'15:00'}
-else if(cw[d.id]){ds=cw[d.id].start;de=cw[d.id].end;closed=cw[d.id].closed;type=cw[d.id].type||'complete';ds2=cw[d.id].start2||'13:00';de2=cw[d.id].end2||'15:00'}
+days.forEach(d=>{let ds='09:00',de='20:00',ds2='15:00',de2='20:00',closed=false,type='complete';
+if(configEntity!=='global'&&!cw[d.id]){const gd=config.weekly[d.id]||{start:'09:00',end:'20:00',closed:false,type:'complete'};ds=gd.start;de=gd.end;closed=gd.closed;type=gd.type||'complete';ds2=gd.start2||'15:00';de2=gd.end2||'20:00'}
+else if(cw[d.id]){ds=cw[d.id].start;de=cw[d.id].end;closed=cw[d.id].closed;type=cw[d.id].type||'complete';ds2=cw[d.id].start2||'15:00';de2=cw[d.id].end2||'20:00'}
 const dc={start:ds,end:de,closed:closed,type:type,start2:ds2,end2:de2};
 const isSplit=dc.type==='split';
 html+=`<div class="flex flex-wrap items-center gap-2 sm:gap-4 p-3 border rounded-xl bg-white shadow-sm">
@@ -836,16 +836,17 @@ html+=`<div class="flex flex-wrap items-center gap-2 sm:gap-4 p-3 border rounded
     <span class="text-[9px] font-bold text-red-400 uppercase">Cerrado</span>
   </label>
   <select id="w-type-${d.id}" class="p-1 border rounded-lg text-xs font-bold bg-white outline-none ${dc.closed?'opacity-30 pointer-events-none':''}"
-    onchange="var sp=document.getElementById('w-split-${d.id}');sp.classList.toggle('hidden',this.value!=='split')">
+    onchange="var sp=document.getElementById('w-split-${d.id}');sp.classList.toggle('hidden',this.value!=='split');if(this.value==='split'){var e=document.getElementById('w-end-${d.id}');if(e.value==='20:00')e.value='13:00';var s2=document.getElementById('w-start2-${d.id}');if(s2.value==='13:00'||s2.value==='15:00')s2.value='15:00';var e2=document.getElementById('w-end2-${d.id}');if(e2.value==='15:00'||e2.value==='20:00')e2.value='20:00'}">
     <option value="complete" ${!isSplit?'selected':''}>Jornada completa</option>
     <option value="split" ${isSplit?'selected':''}>Jornada partida</option>
   </select>
   <div id="w-times-${d.id}" class="flex flex-wrap items-center gap-2 flex-grow ${dc.closed?'opacity-30 pointer-events-none':''}">
-    <input type="time" id="w-start-${d.id}" value="${dc.start}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24">
+    ${isSplit?'<span class="text-[8px] font-black uppercase text-blue-500">Mañana</span>':''}
+    <input type="time" id="w-start-${d.id}" value="${isSplit?dc.start:dc.start}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24">
     <span class="text-slate-400 font-black text-xs">–</span>
-    <input type="time" id="w-end-${d.id}" value="${dc.end}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24">
+    <input type="time" id="w-end-${d.id}" value="${isSplit?dc.end:dc.end}" class="p-1.5 border rounded-lg font-bold bg-white text-xs outline-none w-24">
     <div id="w-split-${d.id}" class="flex items-center gap-1 ${!isSplit?'hidden':''}">
-      <span class="text-orange-400 font-black text-xs">|</span>
+      <span class="text-[8px] font-black uppercase text-orange-500 ml-2">Tarde</span>
       <input type="time" id="w-start2-${d.id}" value="${dc.start2}" class="p-1.5 border border-orange-300 rounded-lg font-bold bg-orange-50 text-xs outline-none w-24">
       <span class="text-slate-400 font-black text-xs">–</span>
       <input type="time" id="w-end2-${d.id}" value="${dc.end2}" class="p-1.5 border border-orange-300 rounded-lg font-bold bg-orange-50 text-xs outline-none w-24">
