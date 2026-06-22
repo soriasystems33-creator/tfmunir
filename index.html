@@ -819,44 +819,7 @@
                     </div>
                 </div>
 
-                <!-- ═══ SECCIÓN 2: BLOQUEOS DE HORARIO ═══ -->
-                <div class="mt-4 rounded-2xl border-2 p-4" style="border-color:var(--brown-light);background:#fcfaf7">
-                    <div class="flex items-center justify-between mb-2">
-                        <h4 class="font-black text-[10px] uppercase tracking-widest flex items-center gap-2" style="color:var(--brown)">
-                            <i data-lucide="ban" class="w-3.5 h-3.5" style="color:var(--rose)"></i> Bloqueos de horario
-                        </h4>
-                        <span class="text-[8px] font-bold px-2 py-0.5 rounded-full" style="background:#fef2f2;color:var(--rose)" id="block-count-badge">0</span>
-                    </div>
-                    <p class="text-[10px] font-medium mb-3" style="color:var(--brown-mid)">Bloquea rangos específicos para impedir reservas, aunque el día esté abierto.</p>
-
-                    <!-- Lista de bloqueos existentes -->
-                    <div id="closed-hours-list" class="mb-3 space-y-2"></div>
-
-                    <!-- Formulario añadir bloqueo -->
-                    <div class="p-3.5 rounded-xl border space-y-2.5" style="background:white;border-color:var(--brown-light)">
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <div>
-                                <label class="text-[8px] font-bold uppercase mb-1 block" style="color:var(--brown-mid)">Desde</label>
-                                <input type="time" id="ch-from" class="w-full p-2 border rounded-xl font-medium bg-white outline-none text-xs" style="border-color:var(--brown-light);color:var(--brown)">
-                            </div>
-                            <div>
-                                <label class="text-[8px] font-bold uppercase mb-1 block" style="color:var(--brown-mid)">Hasta</label>
-                                <input type="time" id="ch-to" class="w-full p-2 border rounded-xl font-medium bg-white outline-none text-xs" style="border-color:var(--brown-light);color:var(--brown)">
-                            </div>
-                        </div>
-                        <div class="flex items-end gap-2.5">
-                            <div class="flex-1">
-                                <label class="text-[8px] font-bold uppercase mb-1 block" style="color:var(--brown-mid)">Afecta a</label>
-                                <select id="ch-entity" class="w-full p-2 border rounded-xl font-medium bg-white outline-none text-xs" style="border-color:var(--brown-light);color:var(--brown)">
-                                    <option value="global">🏢 Todo el local</option>
-                                </select>
-                            </div>
-                            <button onclick="window.addClosedHour()" class="px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest text-white flex items-center gap-1.5 active:scale-95 transition-all shadow-sm whitespace-nowrap" style="background:var(--rose)">
-                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Añadir
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <!-- Nota: Los bloqueos individuales se gestionan desde la agenda de cada especialista -->
             </div>
             <div class="flex gap-3 px-6 py-4 shrink-0" style="border-top:1px solid var(--brown-light)">
                 <button onclick="window.closeConfigDayModal()" class="flex-1 py-3 rounded-xl font-semibold uppercase text-xs" style="color:var(--brown-mid);background:#f5f2ef">CANCELAR</button>

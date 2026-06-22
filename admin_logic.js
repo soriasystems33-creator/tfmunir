@@ -405,20 +405,27 @@ try{
         }
     }
 
-    // Bloques de horario (blocks)
+    // Bloques de horario (blocks) — se muestran como "citas" naranjas
     const empBlocks=window.loadBlocksForDate(ds,emp.name);
     empBlocks.forEach(bl=>{
       const blStart=t2m(bl.startTime);
       const blEnd=t2m(bl.endTime);
       const blTopPx=(blStart-startMin)*PX_PER_MIN;
-      const blHeightPx=Math.max((blEnd-blStart)*PX_PER_MIN-2,18);
-      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}–${bl.endTime})"
+      const blHeightPx=Math.max((blEnd-blStart)*PX_PER_MIN-2,24);
+      const recLabel = bl.recurrence==='daily'?'Diario':bl.recurrence==='weekly'?'Semanal':bl.recurrence==='biweekly'?'Bisemanal':'';
+      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}–${bl.endTime})${recLabel?' — '+recLabel:''}"
         style="position:absolute;top:${blTopPx}px;left:4px;right:4px;height:${blHeightPx}px;
-          background:#fff7ed;border-left:4px solid #f97316;border-radius:8px;
-          padding:3px 8px;overflow:hidden;z-index:5;opacity:0.92;
-          box-shadow:0 1px 4px rgba(249,115,22,.2);pointer-events:auto;cursor:default">
-        <div style="font-size:9px;font-weight:800;color:#c2410c;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔒 ${esc(bl.reason)}</div>
-        ${blHeightPx>22?`<div style="font-size:8px;color:#ea580c">${bl.startTime}–${bl.endTime}</div>`:''}
+          background:repeating-linear-gradient(135deg,#fff7ed,#fff7ed 8px,#ffedd5 8px,#ffedd5 16px);
+          border-left:4px solid #f97316;border-radius:8px;
+          padding:4px 8px;overflow:hidden;z-index:8;
+          box-shadow:0 2px 6px rgba(249,115,22,.18);cursor:default;
+          display:flex;flex-direction:column;justify-content:flex-start">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
+          <span style="font-size:11px;font-weight:900;color:#c2410c;font-family:monospace">${bl.startTime} – ${bl.endTime}</span>
+          <button onclick="event.stopPropagation();window.deleteBlock('${bl.id}')" style="background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;cursor:pointer;line-height:1" title="Eliminar bloqueo">✕</button>
+        </div>
+        ${blHeightPx>28?`<div style="font-size:10px;font-weight:800;color:#ea580c;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">🔒 ${esc(bl.reason)}</div>`:''}
+        ${blHeightPx>44&&recLabel?`<div style="font-size:8px;color:#c2410c;opacity:.75">${recLabel}</div>`:''}
       </div>`;
     });
 
@@ -1225,12 +1232,23 @@ window.openBlockModal=(empName, defaultDate)=>{
   document.getElementById('block-modal-emp').innerText = empName;
   document.getElementById('block-emp-name').value = empName;
   document.getElementById('block-date').value = defaultDate || getLD(new Date());
-  document.getElementById('block-recurrence').value = 'none';
   
-  const d = new Date(defaultDate + 'T12:00:00');
-  const days = ['domingos','lunes','martes','miércoles','jueves','viernes','sábados'];
-  document.getElementById('block-recurrence-weekly').innerText = `Cada semana (los ${days[d.getDay()]})`;
+  const d = new Date((defaultDate || getLD(new Date())) + 'T12:00:00');
+  const dayNames = ['domingos','lunes','martes','miércoles','jueves','viernes','sábados'];
+  const dayName = dayNames[d.getDay()];
+  const formattedDate = d.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  
+  // Build dynamic recurrence select
+  const recSel = document.getElementById('block-recurrence');
+  recSel.innerHTML = `
+    <option value="none">Solo hoy (${formattedDate})</option>
+    <option value="weekly">Todos los ${dayName}</option>
+    <option value="daily">Todos los días</option>
+    <option value="biweekly">Cada dos semanas (${dayName})</option>
+  `;
+  recSel.value = 'none';
 
+  // Build time selects
   let timeOptions = '';
   for(let h=7; h<=22; h++) {
     for(let m=0; m<60; m+=15) {
