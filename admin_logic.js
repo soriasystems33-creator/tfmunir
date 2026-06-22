@@ -1287,6 +1287,9 @@ window.openBlockModal=(empName, defaultDate)=>{
   document.getElementById('block-emp-name').value = empName;
   document.getElementById('block-date').value = defaultDate || getLD(new Date());
   
+  const fdCheckbox = document.getElementById('block-fullday');
+  if(fdCheckbox) { fdCheckbox.checked = false; window.toggleBlockFullDay(); }
+  
   const d = new Date((defaultDate || getLD(new Date())) + 'T12:00:00');
   const dayNames = ['domingos','lunes','martes','miércoles','jueves','viernes','sábados'];
   const dayName = dayNames[d.getDay()];
@@ -1325,10 +1328,29 @@ window.toggleBlockRecurrenceEnd = () => {
 
 window.closeBlockModal = () => document.getElementById('block-modal').classList.add('hidden');
 
+window.toggleBlockFullDay = () => {
+  const isFull = document.getElementById('block-fullday').checked;
+  const container = document.getElementById('block-time-container');
+  if(isFull) {
+    container.style.opacity = '0.4';
+    container.style.pointerEvents = 'none';
+  } else {
+    container.style.opacity = '1';
+    container.style.pointerEvents = 'auto';
+  }
+};
+
 window.saveBlockForm = async () => {
   const emp = document.getElementById('block-emp-name').value;
-  const startTime = document.getElementById('block-start').value;
-  const endTime = document.getElementById('block-end').value;
+  const isFullDay = document.getElementById('block-fullday').checked;
+  let startTime = document.getElementById('block-start').value;
+  let endTime = document.getElementById('block-end').value;
+  
+  if(isFullDay) {
+    startTime = '00:00';
+    endTime = '23:59';
+  }
+
   const reason = document.getElementById('block-reason').value || 'Otro';
   const recurrence = document.getElementById('block-recurrence').value;
   const recurrenceEnd = document.getElementById('block-recurrence-end')?.value || null;
