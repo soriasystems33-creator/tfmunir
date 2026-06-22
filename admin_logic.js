@@ -507,14 +507,8 @@ window.renderGlobalDay=()=>{const ds=getLD(currentViewDate);const label=document
 const title=document.getElementById('view-title');if(title)title.innerText="Agenda Global (Hoy)";
 const cols=document.getElementById('global-day-columns');if(!cols)return;cols.innerHTML='';
 const gc=getDailyConfig(ds,'global');if(gc.type==='closed'){cols.innerHTML='<div class="col-span-full text-center py-20 text-slate-400 font-black uppercase">Centro cerrado hoy</div>';return}
-cols.style.gridTemplateColumns=`repeat(${Math.max(employeesDB.length,1)},1fr)`;
 const todayApts=appointments.filter(a=>a.date===ds&&a.status!=='cancelled');
-employeesDB.forEach(emp=>{const empApts=todayApts.filter(function(a){return empInApt(a,emp.name)}).sort(function(a,b){return a.time.localeCompare(b.time)});
-let html=`<div class="relative"><div class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm pb-4 border-b mb-4 flex items-center justify-center"><span class="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm" style="background:${emp.color}20;color:${emp.color}">${esc(emp.name)}</span></div><div class="flex flex-col gap-3 p-2">`;
-if(empApts.length===0)html+='<div class="text-center py-10 opacity-50"><p class="text-[10px] font-black uppercase text-slate-400">Sin citas hoy</p></div>';
-else empApts.forEach(apt=>{let cc='bg-white border-l-4 border-slate-300';if(apt.status==='pending')cc='bg-amber-50 border-l-4 border-amber-400';else if(apt.status==='confirmed')cc=`bg-opacity-10 border-l-4`;else if(apt.status==='completed')cc='bg-emerald-50 border-l-4 border-emerald-500';
-html+=`<div onclick="window.openModal('${apt.id}')" class="rounded-xl p-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${cc}" style="border-color:${emp.color}"><div class="flex justify-between items-start mb-1"><span class="font-black text-lg font-mono">${apt.time}</span><span class="text-[9px] font-bold uppercase border border-current px-1.5 rounded">${apt.duration} min</span></div><div class="font-black uppercase text-xs mb-0.5">${esc(apt.clientName||apt.name)}</div><div class="text-[10px] opacity-75 truncate">${esc(apt.service)}</div></div>`});
-html+='</div></div>';cols.innerHTML+=html});
+window.renderMultiEmpTimeline(ds, todayApts, cols);
 if(employeesDB.length===0)cols.innerHTML='<div class="col-span-full text-center py-20 text-slate-400"><p class="font-black uppercase">Añade empleados primero</p></div>';
 lucide.createIcons()};
 
@@ -669,39 +663,115 @@ if(empFilter){
   html+='</div>';
   cols.innerHTML=html;
 
-// ── ALL EMPLOYEES — classic column layout ────────────────────────────────
+// ── ALL EMPLOYEES — Multi-column Timeline ────────────────────────────────
 } else {
-  const empsToShow=employeesDB;
-  cols.style.gridTemplateColumns=`repeat(${Math.max(empsToShow.length,1)},1fr)`;
-  empsToShow.forEach(emp=>{
-    const ea=dayApts.filter(function(a){return empInApt(a,emp.name)});
-    let html=`<div class="bg-white rounded-2xl shadow-sm border overflow-hidden flex flex-col">
-      <div class="p-3 border-b flex items-center justify-center gap-2 sticky top-0 z-20" style="background:${emp.color}10">
-        <div class="w-2 h-2 rounded-full" style="background:${emp.color}"></div>
-        <span class="font-black uppercase tracking-widest text-xs" style="color:${emp.color}">${esc(emp.name)}</span>
+  window.renderMultiEmpTimeline(ds, dayApts, cols);
+}
+};
+
+window.renderMultiEmpTimeline = (ds, dayApts, container) => {
+  const gStartH=parseInt(config.start||'09:00',10);
+  const gEndH=Math.ceil(parseInt(config.end||'20:00',10));
+  
+  let eStartH = 24, eEndH = 0;
+  employeesDB.forEach(emp => {
+    const dc = getDailyConfig(ds, emp.name);
+    const os = dc.type==='closed' ? gStartH : parseInt((dc.start||config.start||'09:00').split(':')[0],10);
+    const cs = dc.type==='closed' ? gEndH : Math.ceil(parseInt((dc.end||config.end||'20:00').split(':')[0],10)+(parseInt((dc.end||config.end||'20:00').split(':')[1]||'0',10)>0?1:0));
+    if(os < eStartH) eStartH = os;
+    if(cs > eEndH) eEndH = cs;
+  });
+  
+  const startH = Math.min(gStartH, eStartH, 9);
+  const endH = Math.max(gEndH, eEndH, 20);
+  const PX = 64;
+  const totalPx = (endH - startH) * PX;
+  
+  container.style.gridTemplateColumns = '1fr';
+  
+  let html = `<div style="display:flex;flex-direction:column;height:100%;min-width:${employeesDB.length * 120}px">`;
+  
+  html += `<div style="display:flex;padding-bottom:12px;border-bottom:1px solid #f0ebe6;margin-bottom:12px;position:sticky;top:0;background:white;z-index:40">
+    <div style="width:54px;flex-shrink:0"></div>`; 
+  
+  employeesDB.forEach(emp => {
+    html += `<div style="flex:1;text-align:center;border-left:1px solid #e0d8d5">
+      <div style="display:inline-flex;align-items:center;gap:6px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${emp.color||'#5b8f7a'}"></div>
+        <span style="font-size:12px;font-weight:800;color:#2e2826;text-transform:uppercase">${esc(emp.name)}</span>
       </div>
-      <div class="flex flex-col gap-3 p-4 overflow-y-auto" style="max-height:780px">`;
-    if(ea.length===0)html+='<div class="text-center text-slate-400 mt-10 text-xs italic">Sin citas</div>';
-    else ea.forEach(apt=>{
-      let cc='bg-white border-l-4 border-slate-300';
-      if(apt.status==='confirmed')cc='border-l-4';
-      else if(apt.status==='completed')cc='bg-emerald-50 border-emerald-500';
-      else if(apt.status==='pending')cc='bg-amber-50 border-amber-400';
-      html+=`<div onclick="window.openModal('${apt.id}')" class="p-3 rounded-xl shadow-sm hover:shadow-md cursor-pointer transition-all ${cc}" style="border-color:${emp.color}">
-        <div class="flex justify-between items-center mb-1">
-          <span class="font-black text-lg text-slate-800">${apt.time}</span>
-          <span class="text-[10px] uppercase font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full shadow-sm">${apt.duration} min</span>
-        </div>
-        <div class="font-black text-sm uppercase text-slate-700 truncate">${esc(apt.clientName||apt.name)}</div>
-        <div class="text-xs text-slate-500 truncate">${esc(apt.service)}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<div style="display:flex;flex:1;position:relative">
+    <div style="width:54px;flex-shrink:0;position:relative;height:${totalPx}px">`;
+  for(let h=startH;h<endH;h++){
+    html+=`<div style="position:absolute;top:${(h-startH)*PX}px;right:6px;font-size:10px;font-weight:700;color:#7a6b67;line-height:1;margin-top:-5px">${String(h).padStart(2,'0')}:00</div>`;
+  }
+  html+=`</div>`;
+
+  employeesDB.forEach(emp => {
+    html += `<div style="flex:1;position:relative;height:${totalPx}px;border-left:1px solid #e0d8d5">`;
+    
+    for(let h=startH;h<endH;h++){
+      html+=`<div style="position:absolute;top:${(h-startH)*PX}px;left:0;right:0;border-top:1px solid #e0d8d5;pointer-events:none"></div>`;
+      html+=`<div style="position:absolute;top:${(h-startH)*PX+PX/2}px;left:0;right:0;border-top:1px dashed #f0ebe6;pointer-events:none"></div>`;
+    }
+
+    const todayStr=getLD(new Date());
+    if(ds===todayStr){
+      const now=new Date();const nm=now.getHours()*60+now.getMinutes();const sm=startH*60;
+      if(nm>=sm&&nm<=endH*60){
+        const tp=(nm-sm)/60*PX;
+        html+=`<div style="position:absolute;top:${tp}px;left:0;right:0;height:2px;background:#ef4444;z-index:30"></div>`;
+      }
+    }
+
+    const empBlocks=window.loadBlocksForDate(ds,emp.name);
+    empBlocks.forEach(bl=>{
+      const blStartM = parseInt(bl.startTime.split(':')[0],10)*60 + parseInt(bl.startTime.split(':')[1],10);
+      const blEndM = parseInt(bl.endTime.split(':')[0],10)*60 + parseInt(bl.endTime.split(':')[1],10);
+      const sm2 = startH * 60;
+      const blTopPx = (blStartM - sm2)/60*PX;
+      const blHeightPx = Math.max((blEndM - blStartM)/60*PX - 2, 16);
+      html+=`<div title="🔒 ${esc(bl.reason)} (${bl.startTime}-${bl.endTime})"
+        style="position:absolute;top:${blTopPx}px;left:2px;right:2px;height:${blHeightPx}px;
+          background:repeating-linear-gradient(135deg,#fff7ed,#fff7ed 8px,#ffedd5 8px,#ffedd5 16px);
+          border-left:3px solid #f97316;border-radius:6px;
+          padding:2px 4px;cursor:pointer;overflow:hidden;z-index:5;">
+        <div style="font-size:9px;font-weight:900;color:#c2410c">${bl.startTime} 🔒</div>
       </div>`;
     });
-    html+='</div></div>';
-    cols.innerHTML+=html;
+
+    const ea=dayApts.filter(function(a){return empInApt(a,emp.name)});
+    ea.forEach(apt=>{
+      const sm2=startH*60;
+      const aptM=parseInt((apt.time||'00:00').split(':')[0],10)*60+parseInt((apt.time||'00:00').split(':')[1]||'0',10);
+      const dur=apt.duration||15;
+      const topPx=(aptM-sm2)/60*PX;
+      const hPx=Math.max(dur/60*PX-2,20);
+      let bg,bord;
+      const empColor = emp.color || '#5b8f7a';
+      if(apt.status==='cancelled'){bg='#fef2f2';bord='#ef4444';}
+      else if(apt.status==='completed'){bg='#f0fdf4';bord='#22c55e';}
+      else if(apt.status==='confirmed'){bg=empColor+'20';bord=empColor;}
+      else{bg='#fffbeb';bord='#f59e0b';}
+      html+=`<div onclick="window.openModal('${apt.id}')"
+        title="${esc(apt.clientName)} · ${esc(apt.service)}"
+        style="position:absolute;top:${topPx}px;left:2px;right:2px;height:${hPx}px;
+          background:${bg};border-left:3px solid ${bord};border-radius:6px;
+          padding:2px 4px;cursor:pointer;overflow:hidden;z-index:10;box-shadow:0 2px 4px rgba(0,0,0,0.05)">
+        <div style="font-size:9px;font-weight:900;color:#2e2826;line-height:1">${apt.time}</div>
+        ${hPx>20?`<div style="font-size:9px;font-weight:800;color:#2e2826;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${esc(apt.clientName||apt.name||'?')}</div>`:''}
+      </div>`;
+    });
+
+    html+=`</div>`;
   });
-  if(empsToShow.length===0)cols.innerHTML='<div class="col-span-full text-center py-20 text-slate-400 font-black uppercase">No hay empleados</div>';
-}
-lucide.createIcons()
+  
+  html+=`</div></div>`;
+  container.innerHTML = html;
 };
 
 // ---- RENDER MONTH GRID ----
