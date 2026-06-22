@@ -911,7 +911,7 @@ tr.className=`border-b hover:bg-slate-50 cursor-pointer ${isHighlighted ? 'highl
 tr.onclick=(e)=>{if(!e.target.closest('button')) window.openModal(apt.id)};
 const st=apt.status||'pending';const sc=statusColors[st]||'';
 const newBadge = isHighlighted ? '<span class="inline-block ml-2 px-1.5 py-0.5 rounded text-[8px] font-black bg-amber-400 text-white animate-pulse">NUEVA</span>' : '';
-tr.innerHTML=`<td data-label="Cliente" class="p-4"><div class="font-bold text-slate-800 uppercase text-xs">${esc(apt.clientName||apt.name)||'Sin Nombre'}</div><div class="text-[10px] text-slate-400 font-mono">${esc(apt.clientPhone||apt.phone)||''}</div></td><td data-label="Servicio" class="p-4"><div class="text-xs font-black uppercase text-blue-900">${esc(apt.service)||''}</div><span class="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase ${sc}">${mapSt[st]||st}</span>${newBadge}</td><td data-label="Especialista" class="p-4 text-xs font-bold text-slate-600">${esc(apt.employee?apt.employee.split(',').map(function(e){return e.trim()}).filter(function(e){var l=e.toLowerCase();return l!=='todas'&&l!=='ambos'&&l!=='cualquiera'}).join(', '):'?')||'?'}</td><td data-label="Fecha/Hora" class="p-4 text-xs font-black uppercase">${apt.date}<br><span class="text-teal-600">${apt.time}</span></td><td data-label="Pagado" class="p-4 text-center">${apt.isPaid?'<span class="text-green-500 font-bold text-[10px] bg-green-50 px-2 py-1 rounded-lg border border-green-100">PAGADO</span>':(st==='cancelled'?'<span class="text-red-500 font-bold text-[10px] bg-red-50 px-2 py-1 rounded-lg border border-red-100">CANCELADA</span>':'<span class="text-amber-500 font-bold text-[10px] bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">PENDIENTE</span>')}</td><td data-label="Acciones" class="p-4 text-center"><div class="flex justify-center gap-2"><button onclick="window.openModal('${apt.id}')" class="p-2 border rounded-xl text-blue-500 hover:bg-blue-50"><i data-lucide="edit-3" class="w-4 h-4"></i></button><button onclick="window.deleteAptFromModal('${apt.id}')" class="p-2 border rounded-xl text-red-500 hover:bg-red-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>`;
+tr.innerHTML=`<td data-label="Cliente" class="p-4"><div class="font-bold text-slate-800 uppercase text-xs">${esc(apt.clientName||apt.name)||'Sin Nombre'}</div><div class="text-[10px] text-slate-400 font-mono">${esc(apt.clientPhone||apt.phone)||''}</div></td><td data-label="Servicio" class="p-4"><div class="text-xs font-black uppercase text-blue-900">${esc(apt.service)||''}</div><span class="inline-block mt-1 px-2 py-0.5 rounded text-[9px] font-black uppercase ${sc}">${mapSt[st]||st}</span>${newBadge}</td><td data-label="Especialista" class="p-4 text-xs font-bold text-slate-600">${esc(apt.employee?apt.employee.split(',').map(function(e){return e.trim()}).filter(function(e){var l=e.toLowerCase();return l!=='todas'&&l!=='ambos'&&l!=='cualquiera'}).join(', '):'?')||'?'}</td><td data-label="Fecha/Hora" class="p-4 text-xs font-black uppercase">${apt.date}<br><span class="text-teal-600">${apt.time}</span></td><td data-label="Pagado" class="p-4 text-center">${apt.isPaid?'<span class="text-green-500 font-bold text-[10px] bg-green-50 px-2 py-1 rounded-lg border border-green-100">PAGADO</span>':(st==='cancelled'?'<span class="text-red-500 font-bold text-[10px] bg-red-50 px-2 py-1 rounded-lg border border-red-100">CANCELADA</span>':'<span class="text-amber-500 font-bold text-[10px] bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">PENDIENTE</span>')}</td><td data-label="Acciones" class="p-4 text-center"><div class="flex justify-center gap-2"><button onclick="window.viewAppointment('${apt.id}')" class="p-2 border rounded-xl text-slate-500 hover:bg-slate-50" title="Ver Detalles"><i data-lucide="info" class="w-4 h-4"></i></button><button onclick="window.openModal('${apt.id}')" class="p-2 border rounded-xl text-blue-500 hover:bg-blue-50" title="Editar"><i data-lucide="edit-3" class="w-4 h-4"></i></button><button onclick="window.deleteAptFromModal('${apt.id}')" class="p-2 border rounded-xl text-red-500 hover:bg-red-50" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></td>`;
 tbody.appendChild(tr)});
 // Limpiar resaltado tras el render (opcional, o dejar que la animación termine)
 // window.highlightIds = []; 
@@ -1766,11 +1766,31 @@ window.viewAppointment = function(id) {
     var statusLabel = apt.status === 'confirmed' ? '🔵 Confirmada' : apt.status === 'completed' ? '🟢 Pagada' : apt.status === 'cancelled' ? '🔴 Cancelada' : apt.status || 'Pendiente';
     var sourceLabel = apt.source === 'cliente' || apt.type === 'web' ? '🌐 Web' : '📋 Panel';
     
+    var createdDate = '-';
+    if(apt.createdAt) {
+        var d = new Date(apt.createdAt);
+        if(!isNaN(d)) {
+            createdDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+    }
+    
+    window._toggleAptTechInfo = function(btn) {
+        var info = document.getElementById('apt-tech-info');
+        if(info.classList.contains('hidden')) {
+            info.classList.remove('hidden');
+            btn.style.opacity = '1';
+        } else {
+            info.classList.add('hidden');
+            btn.style.opacity = '0.3';
+        }
+    };
+
     var overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 bg-black/60 flex items-center justify-center p-2 z-[70] backdrop-blur-sm';
     overlay.onclick = function(e) { if(e.target === overlay) overlay.remove(); };
     overlay.innerHTML =
-        '<div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden" style="border:1px solid var(--brown-light)">' +
+        '<div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden relative" style="border:1px solid var(--brown-light)">' +
+            '<button onclick="window._toggleAptTechInfo(this)" class="absolute top-6 right-16 p-1 rounded-full hover:bg-slate-100 transition-all opacity-30" style="color:var(--brown-mid)"><i data-lucide="info" class="w-3 h-3"></i></button>' +
             '<div class="p-5 border-b flex justify-between items-center" style="background:var(--cream);border-color:var(--brown-light)">' +
                 '<h3 class="font-serif italic font-semibold text-xl" style="color:var(--brown)">Detalle de Reserva</h3>' +
                 '<button onclick="this.closest(\'.fixed\').remove()" class="p-2 rounded-full hover:bg-slate-200 transition-colors" style="color:var(--brown-mid)"><i data-lucide="x" class="w-5 h-5"></i></button>' +
@@ -1791,6 +1811,11 @@ window.viewAppointment = function(id) {
                 '</div>' +
                 (apt.price ? '<div class="flex justify-between p-3 rounded-xl font-bold" style="background:var(--cream-dark)"><span style="color:var(--brown-mid)">Precio</span><span style="color:var(--brown)">' + parseFloat(apt.price).toFixed(2) + ' €</span></div>' : '') +
                 (apt.notes ? '<div class="p-3 rounded-xl text-sm" style="background:#fff8e6"><p class="text-[9px] font-bold uppercase tracking-widest mb-1" style="color:var(--brown-mid)">Notas</p><p style="color:var(--brown)">' + esc(apt.notes) + '</p></div>' : '') +
+                '<div id="apt-tech-info" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200 mt-2 text-[10px] space-y-1 font-mono text-slate-500">' +
+                    '<p><strong class="text-slate-700">ID Reserva:</strong> ' + apt.id + '</p>' +
+                    '<p><strong class="text-slate-700">Canal Entrada:</strong> ' + sourceLabel + '</p>' +
+                    '<p><strong class="text-slate-700">Fecha Creación:</strong> ' + createdDate + '</p>' +
+                '</div>' +
             '</div>' +
             '<div class="p-5 border-t flex gap-3" style="background:var(--cream);border-color:var(--brown-light)">' +
                 '<button onclick="this.closest(\'.fixed\').remove();window.openModal(\'' + id + '\')" class="flex-1 py-3 rounded-2xl font-bold uppercase text-xs tracking-widest shadow-md active:scale-95 transition-all text-white" style="background:var(--blue-deep)">Editar reserva</button>' +
