@@ -1572,11 +1572,22 @@ var empStr=_aptSvcs.map(function(s){var e=s.employee||'';if(e.includes(',')){var
 var sDur=_aptSvcs.reduce(function(sum,s){return sum+(s.duration||0)},0);
 var sPrice=parseFloat(document.getElementById('m-price').value)||0;
 var phone=document.getElementById('m-phone').value;window.cleanPhone(document.getElementById('m-phone'));phone=document.getElementById('m-phone').value;
+var isCancelled = document.getElementById('m-status').value === 'cancelled';
+var existing = appointments.find(function(a){return a.id===editingId});
+var cancelledAt = null;
+if (isCancelled) {
+    cancelledAt = (existing && existing.cancelledAt) ? existing.cancelledAt : new Date().toISOString();
+}
 var data={clientName:document.getElementById('m-name').value.trim(),clientPhone:phone,clientEmail:document.getElementById('m-email').value.trim(),services:_aptSvcs,service:sName,employee:empStr||'Todas',date:document.getElementById('m-date').value,time:selectedTime,duration:sDur||15,price:sPrice,status:document.getElementById('m-status').value,isPaid:document.getElementById('m-paid').checked,updatedAt:new Date().toISOString()};
+if(cancelledAt) {
+    data.cancelledAt = cancelledAt;
+} else if(existing && existing.cancelledAt && !isCancelled) {
+    data.cancelledAt = null;
+}
 if(!data.clientName)return alert("Escribe el nombre del cliente.");
 if(data.clientEmail && !data.clientEmail.includes('@')) return alert("Por favor, introduce un correo electrónico válido.");
 try{var isEdit=!!editingId;let res;if(isEdit){await updateDoc(doc(db,'artifacts',AID,'public','data','appointments',editingId),data);data.id=editingId;}
-else{data.createdAt=new Date().toISOString();res=await addDoc(collection(db,'artifacts',AID,'public','data','appointments'),data);data.id=res.id;}
+else{data.createdAt=new Date().toISOString();if(isCancelled) data.cancelledAt = new Date().toISOString();res=await addDoc(collection(db,'artifacts',AID,'public','data','appointments'),data);data.id=res.id;}
 window.closeModal();
     window.trackNotif(data, 'new');
     notifyWebhook(isEdit?'modification':'new',data);
@@ -1800,6 +1811,23 @@ window.viewAppointment = function(id) {
             createdDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
     }
+    var modifiedDate = '';
+    if(apt.updatedAt && apt.createdAt && apt.updatedAt !== apt.createdAt) {
+        var d = new Date(apt.updatedAt);
+        if(!isNaN(d)) {
+            modifiedDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+    }
+    var cancelledDate = '';
+    if(apt.status === 'cancelled' || apt.cancelledAt) {
+        var cDate = apt.cancelledAt || apt.updatedAt;
+        if(cDate) {
+            var d = new Date(cDate);
+            if(!isNaN(d)) {
+                cancelledDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+        }
+    }
     
     window._toggleAptTechInfo = function(btn) {
         var info = document.getElementById('apt-tech-info');
@@ -1842,6 +1870,8 @@ window.viewAppointment = function(id) {
                     '<p><strong class="text-slate-700">ID Reserva:</strong> ' + apt.id + '</p>' +
                     '<p><strong class="text-slate-700">Canal Entrada:</strong> ' + sourceLabel + '</p>' +
                     '<p><strong class="text-slate-700">Fecha Creación:</strong> ' + createdDate + '</p>' +
+                    (modifiedDate ? '<p><strong class="text-slate-700">Fecha Modificación:</strong> ' + modifiedDate + '</p>' : '') +
+                    (cancelledDate ? '<p><strong class="text-slate-700">Fecha Cancelación:</strong> ' + cancelledDate + '</p>' : '') +
                 '</div>' +
             '</div>' +
             '<div class="p-5 border-t flex gap-3" style="background:var(--cream);border-color:var(--brown-light)">' +
