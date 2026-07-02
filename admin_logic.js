@@ -44,7 +44,7 @@ const esc=s=>typeof s!=='string'?s:s.replace(/&/g,"&amp;").replace(/</g,"&lt;").
 const statusColors={'pending':'bg-yellow-100 border-yellow-300 text-yellow-800','confirmed':'bg-blue-100 border-blue-300 text-blue-800','completed':'bg-green-100 border-green-300 text-green-800','cancelled':'bg-red-100 border-red-300 text-red-800 opacity-60'};
 const setStatus=(s,t)=>{const d=document.getElementById('status-dot');if(d)d.className=`w-2.5 h-2.5 rounded-full ${s==='ok'?'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]':s==='loading'?'bg-yellow-400 animate-pulse':'bg-red-500'}`;const l=document.getElementById('status-text');if(l)l.innerText=t};
 const compressImage=f=>new Promise(r=>{const rd=new FileReader();rd.readAsDataURL(f);rd.onload=e=>{const img=new Image();img.src=e.target.result;img.onload=()=>{const c=document.createElement('canvas');const s=300/img.width;c.width=300;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',0.7))}}});
-const WEBHOOK_URL=""; // Desactivado para evitar enviar correos reales a clientes de otros SaaS
+const WEBHOOK_URL="https://n8nyt.soriasystems.site/webhook/unir-tfm-citas"; // Configurado para el nuevo flujo independiente del TFM UNIR
 const notifyWebhook=(event,data)=>{if(!WEBHOOK_URL){console.log('[webhook-tfm] Pendiente de configurar:',event);return;}try{fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,...data})})}catch(e){console.error('[webhook]',e)}};
 const getEmpById=id=>employeesDB.find(e=>e.id===id);
 const getEmpByName=name=>employeesDB.find(e=>e.name===name);
@@ -820,10 +820,13 @@ if(isConfig){
   };
 }else{
   const closed=dc.type==='closed';
+  let empBlocks = [];
   let hasFullDayBlock = false;
+  let hasPartialBlocks = false;
   if(empFilter) {
-    const bks = window.loadBlocksForDate(ds, empFilter);
-    hasFullDayBlock = bks.some(b => b.startTime === '00:00' && b.endTime === '23:59');
+    empBlocks = window.loadBlocksForDate(ds, empFilter);
+    hasFullDayBlock = empBlocks.some(b => b.startTime === '00:00' && b.endTime === '23:59');
+    hasPartialBlocks = empBlocks.some(b => b.startTime !== '00:00' || b.endTime !== '23:59');
   }
 
   let dayApts=appointments.filter(a=>a.date===ds);if(empFilter)dayApts=dayApts.filter(function(a){return empInApt(a,empFilter)});
@@ -831,7 +834,7 @@ if(isConfig){
   
   const pi=pend>0?`<div class="absolute top-1 right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse shadow-sm border border-white"></div>`:'';
   
-  if(closed || hasFullDayBlock){
+  if (closed) {
     div.className=`calendar-day bg-slate-200/60 border-slate-300 flex flex-col ${isToday?'ring-2 ring-teal-500 z-10':''}`;
     div.innerHTML=`
       <div class="font-black text-slate-400 text-lg relative flex items-center">${d} ${pi}</div>
@@ -841,10 +844,27 @@ if(isConfig){
       <div class="flex-1"></div>
       <div class="text-red-400 text-[10px] font-black uppercase text-center mb-1 tracking-widest">CERRADO</div>
     `;
+  } else if (hasFullDayBlock) {
+    div.className=`calendar-day bg-orange-50 border-orange-200 flex flex-col ${isToday?'ring-2 ring-teal-500 z-10':''}`;
+    div.innerHTML=`
+      <div class="font-black text-orange-800 text-lg relative flex items-center">${d} ${pi}</div>
+      <div class="text-orange-500 text-[10px] font-black uppercase italic flex items-center gap-1 mt-2">
+        <i data-lucide="lock" class="w-3 h-3"></i> BLOQUEADO
+      </div>
+      <div class="flex-1"></div>
+      <div class="text-orange-500 text-[10px] font-black uppercase text-center mb-1 tracking-widest">DÍA COMPLETO</div>
+    `;
   } else {
-    div.className=`calendar-day ${isToday?'ring-2 ring-teal-500 bg-teal-50 shadow-md z-10':''}`;
+    const leftBorder = hasPartialBlocks ? 'border-left: 4px solid #f97316;' : '';
+    const orangeBg = hasPartialBlocks ? 'bg-orange-50/30' : '';
+    div.className=`calendar-day ${orangeBg} ${isToday?'ring-2 ring-teal-500 bg-teal-50 shadow-md z-10':''}`;
+    if (leftBorder) div.setAttribute('style', leftBorder);
+    
+    const blocksBadge = hasPartialBlocks ? `<div class="text-[8px] text-orange-600 font-black mt-1 uppercase flex items-center gap-0.5"><i data-lucide="lock" class="w-2.5 h-2.5"></i> ${empBlocks.length} Bloqueo${empBlocks.length>1?'s':''}</div>` : '';
+    
     div.innerHTML=`<div class="font-black text-slate-700 relative flex items-center">${d} ${pi}</div>
                    <div class="text-[8px] text-blue-500 font-black mt-1 uppercase">${active.length} Citas</div>
+                   ${blocksBadge}
                    <div class="w-full bg-slate-100 h-1 rounded-full mt-2 overflow-hidden">
                      <div class="h-full bg-blue-500 transition-all" style="width:${Math.min(100,active.length*15)}%"></div>
                    </div>`;
@@ -1352,12 +1372,21 @@ window.openBlockModal=(empName, defaultDate)=>{
   
   // Build dynamic recurrence select
   const recSel = document.getElementById('block-recurrence');
-  recSel.innerHTML = `
-    <option value="none">Solo hoy (${formattedDate})</option>
-    <option value="weekly">Todos los ${dayName}</option>
-    <option value="daily">Todos los días</option>
-    <option value="biweekly">Cada dos semanas (${dayName})</option>
-  `;
+  if(selectedConfigDays.size > 1) {
+    recSel.innerHTML = `
+      <option value="none">Solo los ${selectedConfigDays.size} días seleccionados</option>
+      <option value="weekly">Todos los ${dayName}</option>
+      <option value="daily">Todos los días</option>
+      <option value="biweekly">Cada dos semanas (${dayName})</option>
+    `;
+  } else {
+    recSel.innerHTML = `
+      <option value="none">Solo hoy (${formattedDate})</option>
+      <option value="weekly">Todos los ${dayName}</option>
+      <option value="daily">Todos los días</option>
+      <option value="biweekly">Cada dos semanas (${dayName})</option>
+    `;
+  }
   recSel.value = 'none';
 
   // Build time selects
@@ -1412,20 +1441,38 @@ window.saveBlockForm = async () => {
   
   if(t2m(startTime) >= t2m(endTime)) return alert('La hora inicio debe ser anterior al fin.');
   
-  const block = { employee: emp, startTime, endTime, reason, recurrence };
-  
-  if(recurrence === 'none') {
-    block.date = document.getElementById('block-date').value;
-  } else {
-    block.weekday = new Date((document.getElementById('block-date').value || getLD(new Date())) + 'T12:00:00').getDay();
-  }
-  
-  if(recurrenceEnd && recurrence !== 'none') block.recurrenceEnd = recurrenceEnd;
-  
   try {
-    await window.saveBlock(block);
-    window.closeBlockModal();
-    if(currentTab.startsWith('calendar_emp_')) window.renderSpecialistDayView();
+    const days = Array.from(selectedConfigDays);
+    if (days.length > 0 && recurrence === 'none') {
+      const promises = [];
+      days.forEach(dStr => {
+        const block = { employee: emp, startTime, endTime, reason, recurrence, date: dStr };
+        promises.push(window.saveBlock(block));
+      });
+      await Promise.all(promises);
+      window.closeBlockModal();
+      window.clearConfigSelection();
+      if(isConfigMode) window.toggleEmpConfigMode();
+    } else {
+      const block = { employee: emp, startTime, endTime, reason, recurrence };
+      if(recurrence === 'none') {
+        block.date = document.getElementById('block-date').value;
+      } else {
+        block.weekday = new Date((document.getElementById('block-date').value || getLD(new Date())) + 'T12:00:00').getDay();
+      }
+      if(recurrenceEnd && recurrence !== 'none') block.recurrenceEnd = recurrenceEnd;
+      await window.saveBlock(block);
+      window.closeBlockModal();
+      window.clearConfigSelection();
+      if(isConfigMode) window.toggleEmpConfigMode();
+    }
+    if (currentTab.startsWith('calendar_emp_')) {
+      if (specialistViewLevel === 'month') {
+        renderMonthGrid('calendar-body', false);
+      } else {
+        window.renderSpecialistDayView();
+      }
+    }
   } catch(e) {
     alert('❌ Error: ' + e.message);
   }
@@ -1545,11 +1592,22 @@ var empStr=_aptSvcs.map(function(s){var e=s.employee||'';if(e.includes(',')){var
 var sDur=_aptSvcs.reduce(function(sum,s){return sum+(s.duration||0)},0);
 var sPrice=parseFloat(document.getElementById('m-price').value)||0;
 var phone=document.getElementById('m-phone').value;window.cleanPhone(document.getElementById('m-phone'));phone=document.getElementById('m-phone').value;
+var isCancelled = document.getElementById('m-status').value === 'cancelled';
+var existing = appointments.find(function(a){return a.id===editingId});
+var cancelledAt = null;
+if (isCancelled) {
+    cancelledAt = (existing && existing.cancelledAt) ? existing.cancelledAt : new Date().toISOString();
+}
 var data={clientName:document.getElementById('m-name').value.trim(),clientPhone:phone,clientEmail:document.getElementById('m-email').value.trim(),services:_aptSvcs,service:sName,employee:empStr||'Todas',date:document.getElementById('m-date').value,time:selectedTime,duration:sDur||15,price:sPrice,status:document.getElementById('m-status').value,isPaid:document.getElementById('m-paid').checked,updatedAt:new Date().toISOString()};
+if(cancelledAt) {
+    data.cancelledAt = cancelledAt;
+} else if(existing && existing.cancelledAt && !isCancelled) {
+    data.cancelledAt = null;
+}
 if(!data.clientName)return alert("Escribe el nombre del cliente.");
 if(data.clientEmail && !data.clientEmail.includes('@')) return alert("Por favor, introduce un correo electrónico válido.");
 try{var isEdit=!!editingId;let res;if(isEdit){await updateDoc(doc(db,'artifacts',AID,'public','data','appointments',editingId),data);data.id=editingId;}
-else{data.createdAt=new Date().toISOString();res=await addDoc(collection(db,'artifacts',AID,'public','data','appointments'),data);data.id=res.id;}
+else{data.createdAt=new Date().toISOString();if(isCancelled) data.cancelledAt = new Date().toISOString();res=await addDoc(collection(db,'artifacts',AID,'public','data','appointments'),data);data.id=res.id;}
 window.closeModal();
     window.trackNotif(data, 'new');
     notifyWebhook(isEdit?'modification':'new',data);
@@ -1773,6 +1831,23 @@ window.viewAppointment = function(id) {
             createdDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
     }
+    var modifiedDate = '';
+    if(apt.updatedAt && apt.createdAt && apt.updatedAt !== apt.createdAt) {
+        var d = new Date(apt.updatedAt);
+        if(!isNaN(d)) {
+            modifiedDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+    }
+    var cancelledDate = '';
+    if(apt.status === 'cancelled' || apt.cancelledAt) {
+        var cDate = apt.cancelledAt || apt.updatedAt;
+        if(cDate) {
+            var d = new Date(cDate);
+            if(!isNaN(d)) {
+                cancelledDate = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            }
+        }
+    }
     
     window._toggleAptTechInfo = function(btn) {
         var info = document.getElementById('apt-tech-info');
@@ -1815,6 +1890,8 @@ window.viewAppointment = function(id) {
                     '<p><strong class="text-slate-700">ID Reserva:</strong> ' + apt.id + '</p>' +
                     '<p><strong class="text-slate-700">Canal Entrada:</strong> ' + sourceLabel + '</p>' +
                     '<p><strong class="text-slate-700">Fecha Creación:</strong> ' + createdDate + '</p>' +
+                    (modifiedDate ? '<p><strong class="text-slate-700">Fecha Modificación:</strong> ' + modifiedDate + '</p>' : '') +
+                    (cancelledDate ? '<p><strong class="text-slate-700">Fecha Cancelación:</strong> ' + cancelledDate + '</p>' : '') +
                 '</div>' +
             '</div>' +
             '<div class="p-5 border-t flex gap-3" style="background:var(--cream);border-color:var(--brown-light)">' +
@@ -1858,9 +1935,20 @@ window.updateConfigMultiActionBar = () => {
     }
     
     if(selectedConfigDays.size > 0) {
+        const isEmpTab = currentTab.startsWith('calendar_emp_');
+        let buttonHtml = '';
+        if(isEmpTab) {
+            const eid = currentTab.replace('calendar_emp_','');
+            const emp = getEmpById(eid);
+            const empName = emp ? emp.name : '';
+            buttonHtml = `<button onclick="window.openBlockModal('${empName.replace(/'/g,"\\'")}', '${Array.from(selectedConfigDays)[0]}')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">🔒 Bloquear Horario</button>`;
+        } else {
+            buttonHtml = `<button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
+        }
+
         bar.innerHTML = `
             <span class="font-bold">${selectedConfigDays.size} días</span>
-            <button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>
+            ${buttonHtml}
             <button onclick="window.clearConfigSelection()" class="p-2 hover:bg-slate-700 rounded-xl transition-colors pointer-events-auto" title="Cancelar selección"><i data-lucide="x" class="w-4 h-4"></i></button>
         `;
         if(window.lucide) window.lucide.createIcons();

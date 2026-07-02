@@ -1,0 +1,890 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "phoneNumberId": "1079456835251411",
+        "recipientPhoneNumber": "=34{{ $json.clientPhone }}",
+        "template": "unir_confirmacion|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.clientName }}"
+                  },
+                  {
+                    "text": "UNIR"
+                  },
+                  {
+                    "text": "={{ $json.services[0].name }}"
+                  },
+                  {
+                    "text": "={{ $json.date }}"
+                  },
+                  {
+                    "text": "={{ $json.time }}"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "button",
+              "sub_type": "url",
+              "buttonParameters": {
+                "parameter": {
+                  "type": "text",
+                  "text": "={{ $json.id }}"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "id": "e615b8be-b168-4aa0-bc32-fc2e884d8d2e",
+      "name": "WhatsApp - Confirmación",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2640,
+        4816
+      ],
+      "webhookId": "d187b1eb-362b-41ee-a1a7-f12922f91204",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4c7zz7Ip3eiv3zgk",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "1079456835251411",
+        "recipientPhoneNumber": "=34{{ $json.clientPhone }}",
+        "template": "recordatorio_asistencia|es",
+        "components": {
+          "component": [
+            {
+              "bodyParameters": {
+                "parameter": [
+                  {
+                    "text": "={{ $json.clientName }}"
+                  },
+                  {
+                    "text": "UNIR"
+                  },
+                  {
+                    "text": "={{ $json.date }}"
+                  },
+                  {
+                    "text": "={{ $json.time }}"
+                  },
+                  {
+                    "text": "={{ $json.services[0].name }}"
+                  },
+                  {
+                    "text": "Av. de la Paz, 137, 26006 Logroño, La Rioja"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "button",
+              "sub_type": "url",
+              "buttonParameters": {
+                "parameter": {
+                  "type": "text",
+                  "text": "={{ $json._id }}"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "id": "a24fe458-ac92-44bc-8565-87b07edbccf3",
+      "name": "WhatsApp - Recordatorio",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2416,
+        5840
+      ],
+      "webhookId": "9f5866b5-71c3-4551-b586-482e81739b91",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4c7zz7Ip3eiv3zgk",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "unir-tfm-citas",
+        "options": {}
+      },
+      "id": "d77300ae-2884-4b10-88d4-6ffb8f8a7478",
+      "name": "Webhook - Eventos1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1744,
+        4720
+      ],
+      "webhookId": "unir-tfm-citas"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.item.json.body || $input.item.json;\nreturn { json: { ...raw } };"
+      },
+      "id": "af543d21-6d8f-4326-adfb-59b35442a887",
+      "name": "Normalizar Payload1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        4720
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event }}",
+              "value2": "completed"
+            }
+          ]
+        }
+      },
+      "id": "5f9e24cf-7024-454e-909f-ee283571f652",
+      "name": "¿Es pago completado?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        4720
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "🧾 Factura - Clínica Estética UNIR",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#f3f4f6;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1917;\">\n  <div style=\"max-width:520px;margin:30px auto;background:#fff;border-radius:24px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 25px 40px -12px rgba(0,0,0,0.15);\">\n    <div style=\"background:#5b8f7a;padding:32px;text-align:center;\">\n      <p style=\"color:#fff;margin:0;font-size:22px;font-weight:700;font-family:Georgia,serif;letter-spacing:3px;text-transform:uppercase;\">UNIR</p>\n    </div>\n    <div style=\"padding:36px;\">\n      <div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;\">\n        <h2 style=\"font-size:18px;font-weight:800;color:#1a1a1a;margin:0;\">FACTURA</h2>\n        <span style=\"font-size:10px;color:#78716c;font-weight:600;background:#f3f4f6;padding:4px 12px;border-radius:20px;\">{{ $json.date }}</span>\n      </div>\n      <div style=\"border-bottom:2px dashed #e5e7eb;padding-bottom:16px;margin-bottom:16px;\">\n        <p style=\"margin:0;font-size:14px;font-weight:700;color:#1a1a1a;\">{{ $json.clientName }}</p>\n        <p style=\"margin:4px 0 0;font-size:12px;color:#78716c;\">{{ $json.clientPhone }}</p>\n      </div>\n      <table style=\"width:100%;border-collapse:collapse;font-size:13px;\">\n        <tr style=\"background:#f9fafb;\">\n          <th style=\"text-align:left;padding:10px 0;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#78716c;border-bottom:1px solid #e5e7eb;\">Concepto</th>\n          <th style=\"text-align:center;padding:10px 0;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#78716c;border-bottom:1px solid #e5e7eb;\">Especialista</th>\n          <th style=\"text-align:right;padding:10px 0;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#78716c;border-bottom:1px solid #e5e7eb;\">Importe</th>\n        </tr>\n        <tr>\n          <td style=\"padding:14px 0;border-bottom:1px solid #f3f4f6;font-weight:600;color:#1a1a1a;\">{{ $json.service }}</td>\n          <td style=\"padding:14px 0;border-bottom:1px solid #f3f4f6;text-align:center;color:#78716c;\">{{ $json.employee }}</td>\n          <td style=\"padding:14px 0;border-bottom:1px solid #f3f4f6;text-align:right;font-weight:700;color:#1a1a1a;\">{{ $json.price }}€</td>\n        </tr>\n      </table>\n      <div style=\"margin-top:16px;padding-top:16px;border-top:2px solid #1a1a1a;display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:#1a1a1a;\">\n        <span>TOTAL</span><span>{{ $json.price }}€</span>\n      </div>\n      <div style=\"margin-top:8px;text-align:right;font-size:10px;color:#22c55e;font-weight:700;\">✓ Pagado</div>\n      <div style=\"margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;text-align:center;\">\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com\" style=\"display:inline-block;padding:12px 28px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;\"><div style=\"margin-top:12px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com/mis-citas?id={{ $json.id }}\" style=\"display:inline-block;padding:10px 24px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Ver todas mis citas</a></div>\n        <div style=\"margin-top:12px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com\" style=\"display:inline-block;padding:12px 28px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;\">Reservar de nuevo</a>\n        <div style=\"font-size:10px;color:#a8a29e;line-height:1.6;margin-top:16px;\">\n          <p style=\"margin:0;\">UNIR · Av. de la Paz, 137, 26006 Logroño, La Rioja</p>\n          <p style=\"margin:2px 0 0;\">{{ $json.date }} · {{ $json.time }}</p>\n        </div>\n      </div>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "bedd2560-c844-42d7-8a53-06b8f003514b",
+      "name": "Email - Factura1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2416,
+        4624
+      ],
+      "webhookId": "05c57e50-bb90-4767-85f3-13faecb43ea5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lXP6vndAJiI50qXz",
+          "name": "Gmail UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event }}",
+              "value2": "new"
+            }
+          ]
+        }
+      },
+      "id": "1b1ca4e4-4e26-443a-81b7-448070bb50bd",
+      "name": "¿Es nueva?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2416,
+        4816
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "✨ Confirmación de tu cita en Clínica Estética UNIR",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#fafaf9;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1917;\">\n  <div style=\"max-width:600px;margin:20px auto;background:#fff;border-radius:30px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 25px -5px rgba(0,0,0,0.05);\">\n    <div style=\"background:#c8ddd6;padding:40px;text-align:center;border-bottom:1px solid #f0ebe6;\">\n      <img src=\"https://tfm-unir-3ce48.firebaseapp.com/logo-email.png\" alt=\"UNIR\" style=\"max-height:80px;width:auto;display:inline-block;border-radius:16px;\" onerror=\"this.src='https://placehold.co/120x80?text=UNIR'\">\n    </div>\n    <div style=\"padding:45px 40px;\">\n      <h2 style=\"font-size:22px;font-weight:700;margin-bottom:20px;color:#1a1a1a;text-align:center;\">¡Hola, {{ $json.clientName }}!</h2>\n      <p style=\"font-size:16px;line-height:1.7;color:#44403c;text-align:center;margin-bottom:30px;\">Tu cita para <strong style=\"color:#1a1a1a;\">{{ $json.service }}</strong> ha sido confirmada. ¡Te esperamos!</p>\n      <div style=\"background:#fafaf9;border:1px solid #5b8f7a;border-radius:20px;padding:30px;margin-bottom:35px;\">\n        <p style=\"margin:0 0 15px 0;font-size:11px;color:#5b8f7a;font-weight:700;text-transform:uppercase;letter-spacing:2px;text-align:center;\">Detalles de tu cita</p>\n        <table style=\"width:100%;border-collapse:collapse;font-size:15px;\">\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Fecha</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.date }}</td></tr>\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Hora</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:700;color:#5b8f7a;font-size:18px;\">{{ $json.time }}h</td></tr>\n          <tr><td style=\"padding:10px 0;color:#78716c;\">Especialista</td><td style=\"padding:10px 0;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.employee }}</td></tr>\n        </table>\n      </div>\n      <p style=\"font-size:14px;color:#78716c;margin-bottom:10px;text-align:center;\">Importe: <strong style=\"color:#1a1a1a;\">{{ $json.price }}€</strong> (pago en estudio)</p>\n      <div style=\"border-top:1px solid #f5f5f4;padding-top:30px;text-align:center;\">\n        <p style=\"font-size:13px;color:#78716c;margin-bottom:20px;\">¿Necesitas cambios o cancelar?</p>\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com/modificar?id={{ $json.id }}\" style=\"display:inline-block;padding:14px 28px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:4px;\">Modificar</a>\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com/cancelar?id={{ $json.id }}\" style=\"display:inline-block;padding:13px 27px;background:transparent;color:#ef4444;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;border:1px solid #ef4444;margin:4px;\">Cancelar</a>\n        <div style=\"margin-top:16px;\">\n          <a href=\"https://tfm-unir-3ce48.firebaseapp.com\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Reservar de nuevo</a>\n        </div>\n      </div>\n    </div>\n    <div style=\"text-align:center;margin-top:16px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com/mis-citas?id={{ $json.id }}\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Ver todas mis citas</a></div><div style=\"background:#fafaf9;padding:40px;text-align:center;border-top:1px solid #f5f5f4;\">\n      <p style=\"margin:0;font-size:13px;font-weight:700;color:#5b8f7a;text-transform:uppercase;letter-spacing:2px;\">UNIR</p>\n      <p style=\"margin:10px 0;font-size:11px;color:#78716c;\">Av. de la Paz, 137, 26006 Logroño, La Rioja</p>\n      <p style=\"margin:25px 0 0 0;font-size:9px;color:#a8a29e;text-transform:uppercase;letter-spacing:1px;\">© 2026 UNIR</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "bca6ac8e-79d4-4e20-bdcd-fc4a1928b48e",
+      "name": "Email - Confirmación Nueva1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        4624
+      ],
+      "webhookId": "775b2d83-ef8e-4836-8f5e-aa0890fdcc30",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lXP6vndAJiI50qXz",
+          "name": "Gmail UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event }}",
+              "value2": "cancellation"
+            }
+          ]
+        }
+      },
+      "id": "5cbda8c3-c7e2-4274-afec-2b65097888c6",
+      "name": "¿Es cancelación?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        5200
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "❌ Cita cancelada - Clínica Estética UNIR",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#fafaf9;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1917;\">\n  <div style=\"max-width:600px;margin:20px auto;background:#fff;border-radius:30px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 25px -5px rgba(0,0,0,0.05);\">\n    <div style=\"background:#c8ddd6;padding:40px;text-align:center;border-bottom:1px solid #f0ebe6;\">\n      <img src=\"https://tfm-unir-3ce48.firebaseapp.com/logo-email.png\" alt=\"UNIR\" style=\"max-height:80px;width:auto;display:inline-block;border-radius:16px;\" onerror=\"this.src='https://placehold.co/120x80?text=UNIR'\">\n    </div>\n    <div style=\"padding:45px 40px;\">\n      <h2 style=\"font-size:22px;font-weight:700;margin-bottom:20px;color:#1a1a1a;text-align:center;\">Cita cancelada, {{ $json.clientName }}</h2>\n      <p style=\"font-size:16px;line-height:1.7;color:#44403c;text-align:center;margin-bottom:30px;\">Hemos procesado la cancelación de tu cita:</p>\n      <div style=\"background:#fff5f5;border:1px solid #fecaca;border-left:4px solid #ef4444;border-radius:20px;padding:30px;margin-bottom:35px;\">\n        <table style=\"width:100%;border-collapse:collapse;font-size:15px;\">\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Servicio</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.service }}</td></tr>\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Fecha</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.date }}</td></tr>\n          <tr><td style=\"padding:10px 0;color:#78716c;\">Hora</td><td style=\"padding:10px 0;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.time }}h</td></tr>\n        </table>\n      </div>\n      <p style=\"font-size:14px;color:#78716c;text-align:center;\">Si deseas una nueva cita, escríbenos por WhatsApp o reserva online.</p>\n      <div style=\"text-align:center;margin-top:25px;\">\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com\" style=\"display:inline-block;padding:14px 32px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:12px;text-transform:uppercase;letter-spacing:1px;\">Reservar de nuevo</a>\n      </div>\n    </div>\n    <div style=\"text-align:center;margin-top:16px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com/mis-citas?id={{ $json.id }}\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Ver todas mis citas</a></div><div style=\"background:#fafaf9;padding:40px;text-align:center;border-top:1px solid #f5f5f4;\">\n      <p style=\"margin:0;font-size:13px;font-weight:700;color:#5b8f7a;text-transform:uppercase;letter-spacing:2px;\">UNIR</p>\n      <p style=\"margin:10px 0;font-size:11px;color:#78716c;\">Av. de la Paz, 137, 26006 Logroño, La Rioja</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "483a653a-22e4-4e92-b101-1fe745472895",
+      "name": "Email - Cancelación1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2864,
+        5008
+      ],
+      "webhookId": "1bdc9a9e-4b99-491e-bf24-56f71fd8b5a2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lXP6vndAJiI50qXz",
+          "name": "Gmail UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.event }}",
+              "value2": "modification"
+            }
+          ]
+        }
+      },
+      "id": "2c60343e-e09c-41f0-8820-729364aef2c8",
+      "name": "¿Es modificación?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        5200
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "✏️ Tu cita en Clínica Estética UNIR ha sido actualizada",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#fafaf9;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1917;\">\n  <div style=\"max-width:600px;margin:20px auto;background:#fff;border-radius:30px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 25px -5px rgba(0,0,0,0.05);\">\n    <div style=\"background:#c8ddd6;padding:40px;text-align:center;border-bottom:1px solid #f0ebe6;\">\n      <img src=\"https://tfm-unir-3ce48.firebaseapp.com/logo-email.png\" alt=\"UNIR\" style=\"max-height:80px;width:auto;display:inline-block;border-radius:16px;\" onerror=\"this.src='https://placehold.co/120x80?text=UNIR'\">\n    </div>\n    <div style=\"padding:45px 40px;\">\n      <h2 style=\"font-size:22px;font-weight:700;margin-bottom:20px;color:#1a1a1a;text-align:center;\">Tu cita ha sido actualizada</h2>\n      <p style=\"font-size:16px;line-height:1.7;color:#44403c;text-align:center;margin-bottom:30px;\">Hola, <strong>{{ $json.clientName }}</strong>. Los datos de tu cita han cambiado:</p>\n      <div style=\"background:#fffbeb;border:1px solid #c9a96e;border-left:4px solid #f59e0b;border-radius:20px;padding:30px;margin-bottom:35px;\">\n        <table style=\"width:100%;border-collapse:collapse;font-size:15px;\">\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Servicio</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.service }}</td></tr>\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Fecha</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.date }}</td></tr>\n          <tr><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;color:#78716c;\">Hora</td><td style=\"padding:10px 0;border-bottom:1px solid #f5f5f4;text-align:right;font-weight:700;color:#f59e0b;font-size:18px;\">{{ $json.time }}h</td></tr>\n          <tr><td style=\"padding:10px 0;color:#78716c;\">Especialista</td><td style=\"padding:10px 0;text-align:right;font-weight:600;color:#1a1a1a;\">{{ $json.employee }}</td></tr>\n        </table>\n      </div>\n      <div style=\"border-top:1px solid #f5f5f4;padding-top:30px;text-align:center;\">\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com/modificar?id={{ $json.id }}\" style=\"display:inline-block;padding:14px 28px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;\">Modificar cita</a>\n      </div>\n    </div>\n    <div style=\"text-align:center;margin-top:16px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com/mis-citas?id={{ $json.id }}\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Ver todas mis citas</a></div><div style=\"background:#fafaf9;padding:40px;text-align:center;border-top:1px solid #f5f5f4;\">\n      <p style=\"margin:0;font-size:13px;font-weight:700;color:#5b8f7a;text-transform:uppercase;letter-spacing:2px;\">UNIR</p>\n      <p style=\"margin:10px 0;font-size:11px;color:#78716c;\">Av. de la Paz, 137, 26006 Logroño, La Rioja</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0b150a12-dea1-45a2-ac34-0f9b2a2872d6",
+      "name": "Email - Modificación1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3088,
+        5184
+      ],
+      "webhookId": "b71e17f0-2e51-4203-bedf-2b6fa40b0bb8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lXP6vndAJiI50qXz",
+          "name": "Gmail UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "getAll",
+        "projectId": "tfm-unir-3ce48",
+        "collection": "=artifacts/tfm-unir-default/public/data/appointments"
+      },
+      "id": "9cce13eb-c4b4-48a2-b39b-fb6e651fb235",
+      "name": "Firestore - Obtener Citas (Ayer)1",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        5424
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "IYUI88kcMTNVyAlN",
+          "name": "Firebase UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "✨ ¿Qué tal tu experiencia en Clínica Estética UNIR?",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#fafaf9;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1917;\">\n  <div style=\"max-width:600px;margin:20px auto;background:#fff;border-radius:30px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 25px -5px rgba(0,0,0,0.05);\">\n    <div style=\"background:#c8ddd6;padding:40px;text-align:center;border-bottom:1px solid #f0ebe6;\">\n      <img src=\"https://tfm-unir-3ce48.firebaseapp.com/logo-email.png\" alt=\"UNIR\" style=\"max-height:80px;width:auto;display:inline-block;border-radius:16px;\" onerror=\"this.src='https://placehold.co/120x80?text=UNIR'\">\n    </div>\n    <div style=\"padding:45px 40px;text-align:center;\">\n      <h2 style=\"font-size:22px;font-weight:700;margin-bottom:20px;color:#1a1a1a;\">¡Hola, {{ $json.clientName }}!</h2>\n      <p style=\"font-size:16px;line-height:1.7;color:#44403c;margin-bottom:15px;\">Esperamos que disfrutaras de tu <strong style=\"color:#1a1a1a;\">{{ $json.service }}</strong>.</p>\n      <p style=\"font-size:15px;line-height:1.7;color:#78716c;margin-bottom:35px;\">¿Te tomas un minuto para valorarnos?</p>\n      <div style=\"background:#fafaf9;border:1px solid #5b8f7a;border-radius:25px;padding:40px 30px;margin-bottom:35px;\">\n        <p style=\"margin:0 0 20px 0;font-size:15px;color:#1a1a1a;font-weight:600;\">¿Cómo fue tu experiencia?</p>\n        <div style=\"font-size:24px;color:#c9a96e;margin-bottom:30px;letter-spacing:8px;\">★ ★ ★ ★ ★</div>\n        <a href=\"https://g.page/r/CUSTOM_REVIEW_LINK/review\" style=\"display:inline-block;padding:15px 40px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:13px;text-transform:uppercase;letter-spacing:1px;\">Dejar mi reseña</a>\n        <div style=\"margin-top:16px;\">\n          <a href=\"https://tfm-unir-3ce48.firebaseapp.com\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Reservar de nuevo</a>\n        </div>\n      </div>\n    </div>\n    <div style=\"text-align:center;margin-top:16px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com/mis-citas?id={{ $json.id }}\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Ver todas mis citas</a></div><div style=\"background:#fafaf9;padding:40px;text-align:center;border-top:1px solid #f5f5f4;\">\n      <p style=\"margin:0;font-size:13px;font-weight:700;color:#5b8f7a;text-transform:uppercase;letter-spacing:2px;\">UNIR</p>\n      <p style=\"margin:10px 0;font-size:11px;color:#78716c;\">Av. de la Paz, 137, 26006 Logroño, La Rioja</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "ca123c02-89d9-4b06-80c8-c991f55ab210",
+      "name": "Email - Pedir Reseña1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2416,
+        5408
+      ],
+      "webhookId": "b1ec9cfb-4f8e-4b9c-9395-4615be6e2542",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lXP6vndAJiI50qXz",
+          "name": "Gmail UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12
+            }
+          ]
+        }
+      },
+      "id": "4f6726b7-0841-423f-b02d-a847da79e34e",
+      "name": "Cada día a las 12:1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1744,
+        5424
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.date }}",
+              "value2": "={{ $now.minus({days: 1}).toISODate() }}"
+            }
+          ]
+        }
+      },
+      "id": "75292623-8035-4b88-9f8f-afadecc16b05",
+      "name": "Filtrar: Citas de Ayer1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        5424
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "getAll",
+        "projectId": "tfm-unir-3ce48",
+        "collection": "=artifacts/tfm-unir-default/public/data/appointments"
+      },
+      "id": "d685471c-172b-41b3-81af-26756167ba2e",
+      "name": "Firestore - Obtener Citas1",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        5744
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "IYUI88kcMTNVyAlN",
+          "name": "Firebase UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tomorrow = new Date();\ntomorrow.setDate(tomorrow.getDate() + 1);\nconst dateStr = tomorrow.getFullYear() + '-' +\n  String(tomorrow.getMonth() + 1).padStart(2, '0') + '-' +\n  String(tomorrow.getDate()).padStart(2, '0');\n\nreturn items.filter(i => {\n  const apt = i.json;\n  return apt.date === dateStr && apt.clientEmail && apt.status !== 'cancelled';\n});"
+      },
+      "id": "735eeaa8-8cbd-43e6-993e-9a60d17dbd55",
+      "name": "Filtrar Citas de Mañana1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        5744
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.clientEmail }}",
+        "subject": "✨ Recordatorio: Tu cita de mañana en Clínica Estética UNIR",
+        "message": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"UTF-8\"></head>\n<body style=\"margin:0;padding:0;background:#fafaf9;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1c1917;\">\n  <div style=\"max-width:600px;margin:20px auto;background:#fff;border-radius:30px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 25px -5px rgba(0,0,0,0.05);\">\n    <div style=\"background:#c8ddd6;padding:40px;text-align:center;border-bottom:1px solid #f0ebe6;\">\n      <img src=\"https://tfm-unir-3ce48.firebaseapp.com/logo-email.png\" alt=\"UNIR\" style=\"max-height:80px;width:auto;display:inline-block;border-radius:16px;\" onerror=\"this.src='https://placehold.co/120x80?text=UNIR'\">\n    </div>\n    <div style=\"padding:45px 40px;\">\n      <h2 style=\"font-size:22px;font-weight:700;margin-bottom:15px;color:#1a1a1a;text-align:center;\">¡Mañana te esperamos!</h2>\n      <p style=\"font-size:15px;line-height:1.6;color:#44403c;text-align:center;margin-bottom:30px;\">Hola <strong>{{ $json.clientName }}</strong>, te recordamos tu cita:</p>\n      <div style=\"background:#5b8f7a;border-radius:20px;padding:30px;margin-bottom:35px;color:#fff;\">\n        <p style=\"margin:0 0 20px 0;font-size:10px;color:#fff;font-weight:700;text-transform:uppercase;letter-spacing:2px;text-align:center;\">Recordatorio de Cita</p>\n        <table style=\"width:100%;border-collapse:collapse;font-size:15px;\">\n          <tr><td style=\"padding:10px 0;color:#e0d8d5;\">Tratamiento</td><td style=\"padding:10px 0;text-align:right;font-weight:600;color:#fff;\">{{ $json.service }}</td></tr>\n          <tr><td style=\"padding:10px 0;color:#e0d8d5;\">Hora</td><td style=\"padding:10px 0;text-align:right;font-weight:700;color:#c9a96e;font-size:18px;\">{{ $json.time }}h</td></tr>\n        </table>\n      </div>\n      <div style=\"text-align:center;\">\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com/modificar?id={{ $json.id }}\" style=\"display:inline-block;padding:14px 28px;background:#5b8f7a;color:#fff;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:4px;\">Modificar</a>\n        <a href=\"https://tfm-unir-3ce48.firebaseapp.com/cancelar?id={{ $json.id }}\" style=\"display:inline-block;padding:11px 25px;background:transparent;color:#ef4444;text-decoration:none;border-radius:50px;font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:1px;border:1px solid #ef4444;margin:4px;\">Cancelar</a>\n      </div>\n    </div>\n    <div style=\"text-align:center;margin-top:16px;\"><a href=\"https://tfm-unir-3ce48.firebaseapp.com/mis-citas?id={{ $json.id }}\" style=\"display:inline-block;padding:12px 28px;background:transparent;color:#5b8f7a;text-decoration:none;border-radius:50px;font-weight:bold;font-size:10px;text-transform:uppercase;letter-spacing:1px;border:1px solid #5b8f7a;\">Ver todas mis citas</a></div><div style=\"background:#fafaf9;padding:40px;text-align:center;border-top:1px solid #f5f5f4;\">\n      <p style=\"margin:0;font-size:13px;font-weight:700;color:#5b8f7a;text-transform:uppercase;letter-spacing:2px;\">UNIR</p>\n      <p style=\"margin:10px 0;font-size:11px;color:#78716c;\">Av. de la Paz, 137, 26006 Logroño, La Rioja</p>\n    </div>\n  </div>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b14d21c1-cf58-43a8-8365-3f9805bd11fb",
+      "name": "Email - Recordatorio1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2416,
+        5648
+      ],
+      "webhookId": "7d0a0e6e-de45-4c54-a90b-b9cfb20df7a8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lXP6vndAJiI50qXz",
+          "name": "Gmail UNIR TFM"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "142d6677-f3f7-4936-89c5-14328b7c6610",
+      "name": "Cada mañana a las 8:1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1744,
+        5744
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1i3ItNB8b33Ql6y_6aQeH5f4z4klLZ-dL8hve4n40fwQ",
+          "mode": "list",
+          "cachedResultName": "FACTURACIÓN CONSUMO WHATS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1i3ItNB8b33Ql6y_6aQeH5f4z4klLZ-dL8hve4n40fwQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1553297411,
+          "mode": "list",
+          "cachedResultName": "UNIR TFM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1i3ItNB8b33Ql6y_6aQeH5f4z4klLZ-dL8hve4n40fwQ/edit#gid=1553297411"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "FECHA": "={{ $('Webhook - Eventos1').item.json.body.date }}",
+            "TELÉFONO ": "={{ $('Webhook - Eventos1').item.json.body.clientPhone }}",
+            "TIPO ": "={{ $json.messaging_product }}",
+            "CLÍNICA ": "UNIR TFM",
+            "RECORDATORIO/CONFIRMACION": "CONFIRMACION"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CLÍNICA ",
+              "displayName": "CLÍNICA ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TELÉFONO ",
+              "displayName": "TELÉFONO ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TIPO ",
+              "displayName": "TIPO ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "RECORDATORIO/CONFIRMACION",
+              "displayName": "RECORDATORIO/CONFIRMACION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "74d8ccbe-890c-4273-bcc4-622936f36938",
+      "name": "Registrar Consumo en Excel",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [
+        2864,
+        4816
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "h9H5Nr0Q86QxLx3F",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1i3ItNB8b33Ql6y_6aQeH5f4z4klLZ-dL8hve4n40fwQ",
+          "mode": "list",
+          "cachedResultName": "FACTURACIÓN CONSUMO WHATS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1i3ItNB8b33Ql6y_6aQeH5f4z4klLZ-dL8hve4n40fwQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1553297411,
+          "mode": "list",
+          "cachedResultName": "UNIR TFM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1i3ItNB8b33Ql6y_6aQeH5f4z4klLZ-dL8hve4n40fwQ/edit#gid=1553297411"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "FECHA": "={{ $('Cada mañana a las 8:1').item.json['Day of month'] }}/{{ $('Cada mañana a las 8:1').item.json.Month }}",
+            "TELÉFONO ": "={{ $json.contacts[0].input }}",
+            "TIPO ": "={{ $json.messaging_product }}",
+            "CLÍNICA ": "UNIR TFM",
+            "RECORDATORIO/CONFIRMACION": "RECORDATORIO"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "FECHA",
+              "displayName": "FECHA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CLÍNICA ",
+              "displayName": "CLÍNICA ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TELÉFONO ",
+              "displayName": "TELÉFONO ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TIPO ",
+              "displayName": "TIPO ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "RECORDATORIO/CONFIRMACION",
+              "displayName": "RECORDATORIO/CONFIRMACION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b9356380-5f6b-4ad0-804f-d6b96b5ad4b4",
+      "name": "Registrar Consumo en Excel1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.1,
+      "position": [
+        2640,
+        5840
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "h9H5Nr0Q86QxLx3F",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp - Confirmación": {
+      "main": [
+        [
+          {
+            "node": "Registrar Consumo en Excel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp - Recordatorio": {
+      "main": [
+        [
+          {
+            "node": "Registrar Consumo en Excel1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Eventos1": {
+      "main": [
+        [
+          {
+            "node": "Normalizar Payload1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar Payload1": {
+      "main": [
+        [
+          {
+            "node": "¿Es pago completado?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es pago completado?1": {
+      "main": [
+        [
+          {
+            "node": "Email - Factura1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Es nueva?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email - Factura1": {
+      "main": [
+        []
+      ]
+    },
+    "¿Es nueva?1": {
+      "main": [
+        [
+          {
+            "node": "Email - Confirmación Nueva1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp - Confirmación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Es cancelación?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es cancelación?1": {
+      "main": [
+        [
+          {
+            "node": "Email - Cancelación1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "¿Es modificación?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es modificación?1": {
+      "main": [
+        [
+          {
+            "node": "Email - Modificación1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore - Obtener Citas (Ayer)1": {
+      "main": [
+        [
+          {
+            "node": "Filtrar: Citas de Ayer1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cada día a las 12:1": {
+      "main": [
+        [
+          {
+            "node": "Firestore - Obtener Citas (Ayer)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar: Citas de Ayer1": {
+      "main": [
+        [
+          {
+            "node": "Email - Pedir Reseña1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firestore - Obtener Citas1": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Citas de Mañana1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Citas de Mañana1": {
+      "main": [
+        [
+          {
+            "node": "Email - Recordatorio1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp - Recordatorio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cada mañana a las 8:1": {
+      "main": [
+        [
+          {
+            "node": "Firestore - Obtener Citas1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f20af6484e867d032857a1d4b47feed5a47287b3ff16a2cb91c5cd653183432"
+  }
+}
