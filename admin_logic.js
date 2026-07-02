@@ -1352,12 +1352,21 @@ window.openBlockModal=(empName, defaultDate)=>{
   
   // Build dynamic recurrence select
   const recSel = document.getElementById('block-recurrence');
-  recSel.innerHTML = `
-    <option value="none">Solo hoy (${formattedDate})</option>
-    <option value="weekly">Todos los ${dayName}</option>
-    <option value="daily">Todos los días</option>
-    <option value="biweekly">Cada dos semanas (${dayName})</option>
-  `;
+  if(selectedConfigDays.size > 1) {
+    recSel.innerHTML = `
+      <option value="none">Solo los ${selectedConfigDays.size} días seleccionados</option>
+      <option value="weekly">Todos los ${dayName}</option>
+      <option value="daily">Todos los días</option>
+      <option value="biweekly">Cada dos semanas (${dayName})</option>
+    `;
+  } else {
+    recSel.innerHTML = `
+      <option value="none">Solo hoy (${formattedDate})</option>
+      <option value="weekly">Todos los ${dayName}</option>
+      <option value="daily">Todos los días</option>
+      <option value="biweekly">Cada dos semanas (${dayName})</option>
+    `;
+  }
   recSel.value = 'none';
 
   // Build time selects
@@ -1412,20 +1421,38 @@ window.saveBlockForm = async () => {
   
   if(t2m(startTime) >= t2m(endTime)) return alert('La hora inicio debe ser anterior al fin.');
   
-  const block = { employee: emp, startTime, endTime, reason, recurrence };
-  
-  if(recurrence === 'none') {
-    block.date = document.getElementById('block-date').value;
-  } else {
-    block.weekday = new Date((document.getElementById('block-date').value || getLD(new Date())) + 'T12:00:00').getDay();
-  }
-  
-  if(recurrenceEnd && recurrence !== 'none') block.recurrenceEnd = recurrenceEnd;
-  
   try {
-    await window.saveBlock(block);
-    window.closeBlockModal();
-    if(currentTab.startsWith('calendar_emp_')) window.renderSpecialistDayView();
+    const days = Array.from(selectedConfigDays);
+    if (days.length > 0 && recurrence === 'none') {
+      const promises = [];
+      days.forEach(dStr => {
+        const block = { employee: emp, startTime, endTime, reason, recurrence, date: dStr };
+        promises.push(window.saveBlock(block));
+      });
+      await Promise.all(promises);
+      window.closeBlockModal();
+      window.clearConfigSelection();
+      if(isConfigMode) window.toggleEmpConfigMode();
+    } else {
+      const block = { employee: emp, startTime, endTime, reason, recurrence };
+      if(recurrence === 'none') {
+        block.date = document.getElementById('block-date').value;
+      } else {
+        block.weekday = new Date((document.getElementById('block-date').value || getLD(new Date())) + 'T12:00:00').getDay();
+      }
+      if(recurrenceEnd && recurrence !== 'none') block.recurrenceEnd = recurrenceEnd;
+      await window.saveBlock(block);
+      window.closeBlockModal();
+      window.clearConfigSelection();
+      if(isConfigMode) window.toggleEmpConfigMode();
+    }
+    if (currentTab.startsWith('calendar_emp_')) {
+      if (specialistViewLevel === 'month') {
+        renderMonthGrid('calendar-body', false);
+      } else {
+        window.renderSpecialistDayView();
+      }
+    }
   } catch(e) {
     alert('❌ Error: ' + e.message);
   }
@@ -1858,9 +1885,20 @@ window.updateConfigMultiActionBar = () => {
     }
     
     if(selectedConfigDays.size > 0) {
+        const isEmpTab = currentTab.startsWith('calendar_emp_');
+        let buttonHtml = '';
+        if(isEmpTab) {
+            const eid = currentTab.replace('calendar_emp_','');
+            const emp = getEmpById(eid);
+            const empName = emp ? emp.name : '';
+            buttonHtml = `<button onclick="window.openBlockModal('${empName.replace(/'/g,"\\'")}', '${Array.from(selectedConfigDays)[0]}')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">🔒 Bloquear Horario</button>`;
+        } else {
+            buttonHtml = `<button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
+        }
+
         bar.innerHTML = `
             <span class="font-bold">${selectedConfigDays.size} días</span>
-            <button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>
+            ${buttonHtml}
             <button onclick="window.clearConfigSelection()" class="p-2 hover:bg-slate-700 rounded-xl transition-colors pointer-events-auto" title="Cancelar selección"><i data-lucide="x" class="w-4 h-4"></i></button>
         `;
         if(window.lucide) window.lucide.createIcons();
