@@ -1672,7 +1672,7 @@ const iniciarEscuchaNotificacionesWeb = () => {
     let firstLoad = true;
     let prevStatus = {};
     onSnapshot(colRef, snap => {
-        const allWebApts = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.type === 'web' || a.source === 'cliente');
+        const allWebApts = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(a => a.type === 'web' || a.source === 'cliente' || a.source === 'chatbot');
         const seen = JSON.parse(localStorage.getItem('seenWebApts_' + AID) || '[]');
         const pending = allWebApts.filter(a => !seen.includes(a.id));
         let cancelledNotified = JSON.parse(localStorage.getItem('cancelledNotified_' + AID) || '[]');
@@ -1732,7 +1732,7 @@ const iniciarEscuchaNotificacionesWeb = () => {
 };
 
 window.handleBellClick = () => {
-    const webApts = appointments.filter(a => a.type === 'web' || a.source === 'cliente');
+    const webApts = appointments.filter(a => a.type === 'web' || a.source === 'cliente' || a.source === 'chatbot');
     const seen = JSON.parse(localStorage.getItem('seenWebApts_' + AID) || '[]');
     const pending = webApts.filter(a => !seen.includes(a.id));
     
@@ -1764,7 +1764,7 @@ window.viewAppointment = function(id) {
     var dp = apt.date ? apt.date.split('-') : [];
     var fd = dp.length === 3 ? dp[2] + '/' + dp[1] + '/' + dp[0] : (apt.date || '-');
     var statusLabel = apt.status === 'confirmed' ? '🔵 Confirmada' : apt.status === 'completed' ? '🟢 Pagada' : apt.status === 'cancelled' ? '🔴 Cancelada' : apt.status || 'Pendiente';
-    var sourceLabel = apt.source === 'cliente' || apt.type === 'web' ? '🌐 Web' : '📋 Panel';
+    var sourceLabel = apt.source === 'chatbot' ? '🤖 Chatbot' : (apt.source === 'cliente' || apt.type === 'web' ? '🌐 Web' : '📋 Panel');
     
     var createdDate = '-';
     if(apt.createdAt) {
@@ -2049,7 +2049,7 @@ onSnapshot(collection(db,'artifacts',AID,'public','data','blocks'),snap=>{
 const originalSetTab = window.setTab;
 window.setTab = (tab) => {
     if(tab === 'appointments') {
-        const webApts = appointments.filter(a => a.type === 'web' || a.source === 'cliente');
+        const webApts = appointments.filter(a => a.type === 'web' || a.source === 'cliente' || a.source === 'chatbot');
         const seen = webApts.map(a => a.id);
         localStorage.setItem('seenWebApts_' + AID, JSON.stringify(seen));
         const badge = document.getElementById('web-noti-badge');
