@@ -1994,6 +1994,39 @@ window.openMultiDayModal = () => {
     document.getElementById('cmd-title').innerText = `Configurar ${selectedConfigDays.size} días`;
     const empName = entity === 'global' ? 'Global' : (getEmpById(entity)?.name || entity);
     document.getElementById('cmd-subtitle').innerText = empName;
+
+    // Cargar horario configurado del primer día seleccionado (si existe) para no sobreescribir con valores por defecto
+    const days = Array.from(selectedConfigDays);
+    const firstDay = days[0];
+    let type = 'continuous';
+    let s1 = '09:00', e1 = '14:00';
+    let s2 = '16:00', e2 = '20:00';
+    
+    if (firstDay && config.specialDays?.[firstDay]?.[entity]) {
+        const se = config.specialDays[firstDay][entity];
+        if (se.start && se.end) {
+            s1 = se.start;
+            if (se.closedHours && se.closedHours.length > 0) {
+                type = 'split';
+                e1 = se.closedHours[0];
+                const lastCh = se.closedHours[se.closedHours.length - 1];
+                let m = parseInt(lastCh.split(':')[0], 10)*60 + parseInt(lastCh.split(':')[1], 10) + 15;
+                let h = Math.floor(m/60);
+                let mins = m%60;
+                s2 = String(h).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
+                e2 = se.end;
+            } else {
+                e1 = se.end;
+            }
+        }
+    }
+    
+    document.getElementById('cmd-shift-type').value = type;
+    document.getElementById('cmd-start-1').value = s1;
+    document.getElementById('cmd-end-1').value = e1;
+    document.getElementById('cmd-start-2').value = s2;
+    document.getElementById('cmd-end-2').value = e2;
+    window.toggleCmdShiftType();
 };
 
 window.closeMultiDayModal = () => {
