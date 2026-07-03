@@ -244,6 +244,7 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
             };
         }
     }
+    let globalClosed=false, globalStart=null, globalEnd=null;
     const d=parseDate(dateStr);const day=d.getDay();
     // 3) Horario semanal individual
     let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null;
