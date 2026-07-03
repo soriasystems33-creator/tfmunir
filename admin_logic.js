@@ -220,13 +220,31 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
         console.log(`[DEBUG] Día ${dateStr} (${entity}): Override manual. Tipo: ${sd[entity].type}`);
         return sd[entity];
     }
-    const d=parseDate(dateStr);const day=d.getDay();
-    // 2) Estado del día especial global
-    let globalClosed=false, globalStart=null, globalEnd=null;
+    // 2) Estado del día especial global (si está configurado, sobrescribe horarios semanales o generales)
     if(sd?.global){
-        if(sd.global.type==='closed') globalClosed=true;
-        else if(sd.global.type==='custom'){globalStart=sd.global.start;globalEnd=sd.global.end}
+        if(sd.global.type==='closed') {
+            console.log(`[DEBUG] Día ${dateStr} (${entity}): CERRADO por día especial GLOBAL.`);
+            return {type:'closed'};
+        } else if(sd.global.type==='split') {
+            console.log(`[DEBUG] Día ${dateStr} (${entity}): Usando jornada partida especial GLOBAL del día.`);
+            return {
+                type: 'split',
+                start: sd.global.start,
+                end: sd.global.end,
+                start2: sd.global.start2,
+                end2: sd.global.end2
+            };
+        } else if(sd.global.type==='custom') {
+            console.log(`[DEBUG] Día ${dateStr} (${entity}): Usando horario especial GLOBAL del día: ${sd.global.start}-${sd.global.end}`);
+            return {
+                type: 'custom',
+                start: sd.global.start,
+                end: sd.global.end,
+                closedHours: sd.global.closedHours || []
+            };
+        }
     }
+    const d=parseDate(dateStr);const day=d.getDay();
     // 3) Horario semanal individual
     let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null;
     if(entity!=='global'){
