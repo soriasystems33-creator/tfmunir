@@ -1445,6 +1445,15 @@ window.saveBlock=async(blockData)=>{
 window.deleteBlock=async(id)=>{
   if(!confirm('¿Eliminar este bloqueo?'))return;
   await deleteDoc(doc(db,'artifacts',AID,'public','data','blocks',id));
+  if (document.getElementById('day-modal') && !document.getElementById('day-modal').classList.contains('hidden')) {
+    let empFilter = null;
+    if (currentTab.startsWith('calendar_emp_')) {
+      const eid = currentTab.replace('calendar_emp_','');
+      const emp = getEmpById(eid);
+      if (emp) empFilter = emp.name;
+    }
+    window.openDayModal(selectedDayInModal, empFilter);
+  }
 };
 window.openBlockModal=(empName, defaultDate)=>{
   document.getElementById('block-modal-emp').innerText = empName;
@@ -2248,6 +2257,7 @@ onSnapshot(collection(db,'artifacts',AID,'public','data','employees'),snap=>{
 onSnapshot(collection(db,'artifacts',AID,'public','data','blocks'),snap=>{
   blocksDB=snap.docs.map(d=>({id:d.id,...d.data()}));
   if(currentTab.startsWith('calendar_emp_')&&specialistViewLevel==='day')window.renderSpecialistDayView();
+  else if(currentTab.startsWith('calendar')) window.render();
 });
 
 }catch(err){console.error("❌ ERROR CRÍTICO EN startListeners:",err)}};
