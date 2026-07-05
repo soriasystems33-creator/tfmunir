@@ -2135,7 +2135,11 @@ window.updateConfigMultiActionBar = () => {
             const empName = emp ? emp.name : '';
             buttonHtml = `<button onclick="window.openBlockModal('${empName.replace(/'/g,"\\'")}', '${Array.from(selectedConfigDays)[0]}')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">🔒 Bloquear Horario</button>`;
         } else {
-            buttonHtml = `<button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
+            if (selectedConfigDays.size === 1) {
+                buttonHtml = `<button onclick="window.openConfigDay('${Array.from(selectedConfigDays)[0]}')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
+            } else {
+                buttonHtml = `<button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
+            }
         }
 
         bar.innerHTML = `
