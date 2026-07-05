@@ -215,10 +215,26 @@ window.getClientList = () => {
 // ---- DAILY CONFIG HELPER ----
 const getDailyConfig=(dateStr,entity='global')=>{try{
     const sd=config.specialDays?.[dateStr];
-    // 1) Override MANUAL de la empleada
-    if(entity!=='global' && sd?.[entity] && !sd[entity]._auto){
-        console.log(`[DEBUG] Día ${dateStr} (${entity}): Override manual. Tipo: ${sd[entity].type}`);
-        return sd[entity];
+    // 1) Override MANUAL de la empleada (por ID o por Nombre)
+    let empOverride = null;
+    if (entity !== 'global' && sd) {
+        if (sd[entity] && !sd[entity]._auto) {
+            empOverride = sd[entity];
+        } else {
+            const empByName = employeesDB.find(e => e.name.toLowerCase() === entity.toLowerCase());
+            if (empByName && sd[empByName.id] && !sd[empByName.id]._auto) {
+                empOverride = sd[empByName.id];
+            } else {
+                const empById = employeesDB.find(e => e.id === entity || String(e.id) === String(entity));
+                if (empById && sd[empById.name] && !sd[empById.name]._auto) {
+                    empOverride = sd[empById.name];
+                }
+            }
+        }
+    }
+    if (empOverride) {
+        console.log(`[DEBUG] Día ${dateStr} (${entity}): Override manual. Tipo: ${empOverride.type}`);
+        return empOverride;
     }
     // 2) Estado del día especial global (si está configurado, sobrescribe horarios semanales o generales)
     if(sd?.global){
