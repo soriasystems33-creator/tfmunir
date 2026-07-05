@@ -246,6 +246,10 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
     }
     let globalClosed=false, globalStart=null, globalEnd=null;
     const d=parseDate(dateStr);const day=d.getDay();
+    // 2.5) Si el día de la semana está cerrado en el horario semanal general, se cierra para todos
+    if (config?.weekly && config.weekly[day] && config.weekly[day].closed) {
+        return { type: 'closed' };
+    }
     // 3) Horario semanal individual
     let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null;
     if(entity!=='global'){
