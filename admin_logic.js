@@ -702,11 +702,17 @@ if(empFilter){
           box-shadow:0 2px 6px rgba(0,0,0,.04);"
         onmouseover="this.style.boxShadow='0 4px 12px rgba(249,115,22,0.2)';this.style.transform='scaleX(1.02)'"
         onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,.04)';this.style.transform=''">
-        <div style="display:flex;align-items:center;gap:5px">
-          <span style="font-size:11px;font-weight:900;font-family:monospace;color:#c2410c">${bl.startTime}</span>
-          <span style="font-size:9px;color:#f97316;font-weight:bold">🔒 BLOQUEADO</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;width:100%">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:11px;font-weight:900;font-family:monospace;color:#c2410c">${bl.startTime}</span>
+            <span style="font-size:9px;color:#f97316;font-weight:bold">🔒 BLOQUEADO</span>
+          </div>
+          <button onclick="event.stopPropagation(); window.deleteBlock('${bl.id}')"
+            style="background:#ea580c;color:white;border:none;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin-left:auto;z-index:20;box-shadow:0 1px 2px rgba(0,0,0,0.1)">
+            Restaurar horario
+          </button>
         </div>
-        <div style="font-size:11px;font-weight:800;color:#c2410c;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(bl.reason)}</div>
+        <div style="font-size:11px;font-weight:800;color:#c2410c;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${esc(bl.reason)}</div>
       </div>`;
     });
 
@@ -921,12 +927,19 @@ if(isConfig){
       <div class="text-red-400 text-[10px] font-black uppercase text-center mb-1 tracking-widest">CERRADO</div>
     `;
   } else if (hasFullDayBlock) {
+    const fdb = empBlocks.find(b => b.startTime === '00:00' && b.endTime === '23:59') || { id: '' };
     div.className=`calendar-day bg-orange-50 border-orange-200 flex flex-col ${isToday?'ring-2 ring-teal-500 z-10':''}`;
     div.innerHTML=`
       <div class="font-black text-orange-800 text-lg relative flex items-center">${d} ${pi}</div>
       <div class="text-orange-500 text-[10px] font-black uppercase italic flex items-center gap-1 mt-2">
         <i data-lucide="lock" class="w-3 h-3"></i> BLOQUEADO
       </div>
+      <button onclick="event.stopPropagation(); window.deleteBlock('${fdb.id}')"
+              style="margin-top: 4px; background: #ea580c; color: white; border: none; padding: 3px 6px; border-radius: 6px; font-size: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; width: fit-content; z-index: 20;"
+              onmouseover="this.style.background='#c2410c'"
+              onmouseout="this.style.background='#ea580c'">
+        Restaurar
+      </button>
       <div class="flex-1"></div>
       <div class="text-orange-500 text-[10px] font-black uppercase text-center mb-1 tracking-widest">DÍA COMPLETO</div>
     `;
