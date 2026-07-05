@@ -1260,7 +1260,8 @@ window.renderClosedHoursList=()=>{
   }
   container.classList.remove('hidden');
   listEl.innerHTML=tmpClosedHours.map((ch,idx)=>{
-    const entityName=ch.entity==='global'?'Global':(employeesDB.find(e=>e.id===ch.entity||e.name.toLowerCase()===ch.entity.toLowerCase())?.name||ch.entity);
+    const chEnt=ch.entity||'global';
+    const entityName=chEnt==='global'?'Global':(employeesDB.find(e=>e.id===chEnt||(e.name||'').toLowerCase()===chEnt.toLowerCase())?.name||chEnt);
     return `<div class="flex items-center justify-between p-3 rounded-2xl border bg-white text-xs font-bold" style="border-color:var(--brown-light);color:var(--brown)">
       <div class="flex items-center gap-2">
         <span class="text-rose-500">⏰</span>
