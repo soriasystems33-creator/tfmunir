@@ -1206,6 +1206,7 @@ window.openConfigDay=ds=>{
   document.getElementById('local-start').value=tmpLocal.start||config.start||"09:00";
   document.getElementById('local-end').value=tmpLocal.end||config.end||"20:00";
   window.setLocalConfigType(tmpLocal.type);
+  window.renderClosedHoursList();
   document.getElementById('config-day-modal').classList.remove('hidden');
   if(window.lucide)lucide.createIcons();
 };
@@ -1228,12 +1229,40 @@ document.getElementById('local-custom-fields').classList.toggle('hidden',type!==
 const splitFields=document.getElementById('local-split-extra');if(splitFields)splitFields.classList.toggle('hidden',type!=='split')};
 // ── CIERRES DE HORA — Añadir / Eliminar / Renderizar ────────────────────────
 window.addClosedHour=()=>{};
-window.removeClosedHour=()=>{};
-window.renderClosedHoursList=()=>{};
+window.removeClosedHour=(idx)=>{
+  if(!confirm('¿Eliminar este cierre de horas?'))return;
+  tmpClosedHours.splice(idx,1);
+  window.renderClosedHoursList();
+};
+window.renderClosedHoursList=()=>{
+  const container=document.getElementById('local-closed-hours-section');
+  const listEl=document.getElementById('local-closed-hours-list');
+  if(!container||!listEl)return;
+  if(tmpClosedHours.length===0){
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+  listEl.innerHTML=tmpClosedHours.map((ch,idx)=>{
+    const entityName=ch.entity==='global'?'Global':(employeesDB.find(e=>e.id===ch.entity||e.name.toLowerCase()===ch.entity.toLowerCase())?.name||ch.entity);
+    return `<div class="flex items-center justify-between p-3 rounded-2xl border bg-white text-xs font-bold" style="border-color:var(--brown-light);color:var(--brown)">
+      <div class="flex items-center gap-2">
+        <span class="text-rose-500">⏰</span>
+        <span>${ch.from} - ${ch.to}</span>
+        <span class="text-[9px] px-2 py-0.5 rounded-full uppercase font-black" style="background:#e0f2fe;color:#075985">${entityName}</span>
+      </div>
+      <button onclick="window.removeClosedHour(${idx})" class="p-1.5 hover:bg-red-50 rounded-xl text-red-500 transition-colors" title="Eliminar cierre">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    </div>`;
+  }).join('');
+  if(window.lucide)lucide.createIcons();
+};
 
 // ── Obtener cierres de hora aplicables para un día y entidad ──────────────
 window.getClosedHoursForDay=(dateStr, entity)=>{
-  return [];
+  const list=config.specialDays?.[dateStr]?.closedHours||[];
+  return list.filter(ch=>ch.entity==='global'||ch.entity.toLowerCase()===entity.toLowerCase());
 };
 
 window.saveConfigDay=async()=>{try{
@@ -1282,7 +1311,13 @@ if(configEntity==='global'){
   }
 }
 
-    // closedHours ya no se gestionan aquí (se usan blocks por especialista)
+    // Guardar closedHours (legacy)
+    if(tmpClosedHours.length>0){
+      if(!sd[selectedDayInModal]) sd[selectedDayInModal]={};
+      sd[selectedDayInModal].closedHours=tmpClosedHours;
+    }else{
+      if(sd[selectedDayInModal]) delete sd[selectedDayInModal].closedHours;
+    }
 
     // Limpiar día si está completamente vacío
     const dayKeys=Object.keys(sd[selectedDayInModal]||{});
