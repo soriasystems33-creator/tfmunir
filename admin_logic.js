@@ -622,6 +622,11 @@ if(empFilter){
   const totalPx=(endH-startH)*PX;
   const empColor=emp.color||'#5b8f7a';
   const empApts=dayApts.filter(function(a){return empInApt(a,emp.name)});
+  const empBlocks=window.loadBlocksForDate(ds,emp.name);
+  const empOverride = config.specialDays?.[ds]?.[emp.id] || config.specialDays?.[ds]?.[emp.name];
+  const hasBlocks = empBlocks.length > 0;
+  const hasOverride = empOverride && !empOverride._auto;
+  const showRestore = hasBlocks || hasOverride;
 
   cols.style.gridTemplateColumns='1fr';
 
@@ -636,6 +641,12 @@ if(empFilter){
       <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;color:white;background:${empColor}">${empApts.length} citas</span>
     </div>
     <div style="display:flex;gap:8px">
+      ${showRestore ? `
+      <button onclick="window.restoreDayForEmp('${ds}','${emp.name.replace(/'/g,"\\'")}');"
+        style="background:#ea580c;color:white;border:none;padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+        🔁 Restaurar horario
+      </button>
+      ` : ''}
       <button onclick="window.closeDayModal();window.openBlockModal('${emp.name.replace(/'/g,"\\'")}','${ds}')"
         style="background:#f97316;color:white;border:none;padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer">
         🔒 Bloquear
@@ -688,9 +699,11 @@ if(empFilter){
     // Blocks
     const empBlocks=window.loadBlocksForDate(ds,emp.name);
     empBlocks.forEach(bl=>{
-      const blStartM = parseInt(bl.startTime.split(':')[0],10)*60 + parseInt(bl.startTime.split(':')[1],10);
-      const blEndM = parseInt(bl.endTime.split(':')[0],10)*60 + parseInt(bl.endTime.split(':')[1],10);
+      const rawStart = parseInt(bl.startTime.split(':')[0],10)*60 + parseInt(bl.startTime.split(':')[1],10);
+      const rawEnd = parseInt(bl.endTime.split(':')[0],10)*60 + parseInt(bl.endTime.split(':')[1],10);
       const sm2 = startH * 60;
+      const blStartM = Math.max(rawStart, sm2);
+      const blEndM = Math.min(rawEnd, endH * 60);
       const blTopPx = (blStartM - sm2)/60*PX;
       const blHeightPx = Math.max((blEndM - blStartM)/60*PX - 2, 24);
       const recLabel = bl.recurrence==='daily'?'Diario':bl.recurrence==='weekly'?'Semanal':bl.recurrence==='biweekly'?'Bisemanal':'';
@@ -1454,6 +1467,42 @@ window.deleteBlock=async(id)=>{
     }
     window.openDayModal(selectedDayInModal, empFilter);
   }
+};
+window.restoreDayForEmp = async (ds, empName) => {
+  if (!confirm('¿Restaurar el horario por defecto para este día?')) return;
+  const empBlocks = window.loadBlocksForDate(ds, empName);
+  const deletePromises = empBlocks.map(bl => 
+    deleteDoc(doc(db, 'artifacts', AID, 'public', 'data', 'blocks', bl.id))
+  );
+  await Promise.all(deletePromises);
+  let sd = { ...(config.specialDays || {}) };
+  if (sd[ds]) {
+    const emp = employeesDB.find(e => e.name.toLowerCase() === empName.toLowerCase());
+    if (emp) {
+      delete sd[ds][emp.id];
+      delete sd[ds][emp.name];
+    } else {
+      delete sd[ds][empName];
+    }
+    const globalVal = sd[ds]?.global;
+    if (globalVal && emp) {
+      sd[ds][emp.id] = { ...globalVal, _auto: true };
+      sd[ds][emp.name] = { ...globalVal, _auto: true };
+    }
+    const dayKeys = Object.keys(sd[ds] || {});
+    if (dayKeys.length === 0) delete sd[ds];
+    await updateDoc(doc(db, 'artifacts', AID, 'public', 'data', 'settings', 'main'), { specialDays: sd });
+    config.specialDays = sd;
+  }
+  if (currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+  else window.render();
+  let empFilter = null;
+  if (currentTab.startsWith('calendar_emp_')) {
+    const eid = currentTab.replace('calendar_emp_','');
+    const emp = getEmpById(eid);
+    if (emp) empFilter = emp.name;
+  }
+  window.openDayModal(ds, empFilter);
 };
 window.openBlockModal=(empName, defaultDate)=>{
   document.getElementById('block-modal-emp').innerText = empName;
