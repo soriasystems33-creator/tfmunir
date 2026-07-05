@@ -251,13 +251,21 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
         return { type: 'closed' };
     }
     // 3) Horario semanal individual
-    let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null;
+    let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null, weeklyType=null, weeklyStart2=null, weeklyEnd2=null;
     if(entity!=='global'){
         const ew=config[`weekly_${entity}`];
         if(ew && ew[day]){
             hasWeekly=true;
             if(ew[day].closed) weeklyClosed=true;
-            else{weeklyStart=ew[day].start;weeklyEnd=ew[day].end}
+            else{
+                weeklyType=ew[day].type || 'standard';
+                weeklyStart=ew[day].start;
+                weeklyEnd=ew[day].end;
+                if(weeklyType==='split'){
+                    weeklyStart2=ew[day].start2;
+                    weeklyEnd2=ew[day].end2;
+                }
+            }
         }
     }
     // 4) Global "Cerrado" → cierra a TODOS (festivo, etc)
@@ -265,15 +273,41 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
         console.log(`[DEBUG] Día ${dateStr} (${entity}): CERRADO por día especial GLOBAL.`);
         return{type:'closed'};
     }
-    // 5) Empleada con horario semanal → intersectar con global custom si existe
+    // 5) Empleada con horario semanal → intersectar con global custom / global weekly
     if(hasWeekly){
         if(weeklyClosed){
             console.log(`[DEBUG] Día ${dateStr} (${entity}): Cerrado por horario SEMANAL del empleado (día ${day}).`);
             return{type:'closed'};
         }
+        const gWeekly = config?.weekly?.[day];
+        if (weeklyType === 'split') {
+            let s1 = weeklyStart, e1 = weeklyEnd, s2 = weeklyStart2, e2 = weeklyEnd2;
+            if (globalStart) {
+                s1 = t2m(weeklyStart) > t2m(globalStart) ? weeklyStart : globalStart;
+                e1 = t2m(weeklyEnd) < t2m(globalEnd) ? weeklyEnd : globalEnd;
+                s2 = t2m(weeklyStart2) > t2m(globalStart) ? weeklyStart2 : globalStart;
+                e2 = t2m(weeklyEnd2) < t2m(globalEnd) ? weeklyEnd2 : globalEnd;
+            } else if (gWeekly && gWeekly.type === 'split') {
+                s1 = t2m(weeklyStart) > t2m(gWeekly.start) ? weeklyStart : gWeekly.start;
+                e1 = t2m(weeklyEnd) < t2m(gWeekly.end) ? weeklyEnd : gWeekly.end;
+                s2 = t2m(weeklyStart2) > t2m(gWeekly.start2) ? weeklyStart2 : gWeekly.start2;
+                e2 = t2m(weeklyEnd2) < t2m(gWeekly.end2) ? weeklyEnd2 : gWeekly.end2;
+            }
+            return { type: 'split', start: s1, end: e1, start2: s2, end2: e2 };
+        }
+        if (gWeekly && gWeekly.type === 'split' && !globalStart) {
+            const s1 = t2m(weeklyStart) > t2m(gWeekly.start) ? weeklyStart : gWeekly.start;
+            const e1 = t2m(weeklyEnd) < t2m(gWeekly.end) ? weeklyEnd : gWeekly.end;
+            const s2 = t2m(weeklyStart) > t2m(gWeekly.start2) ? weeklyStart : gWeekly.start2;
+            const e2 = t2m(weeklyEnd) < t2m(gWeekly.end2) ? weeklyEnd : gWeekly.end2;
+            if (t2m(s2) < t2m(e2)) {
+                return { type: 'split', start: s1, end: e1, start2: s2, end2: e2 };
+            } else {
+                return { type: 'standard', start: s1, end: e1 };
+            }
+        }
         const start = globalStart ? (t2m(weeklyStart)>t2m(globalStart)?weeklyStart:globalStart) : weeklyStart;
         const end = globalEnd ? (t2m(weeklyEnd)<t2m(globalEnd)?weeklyEnd:globalEnd) : weeklyEnd;
-        console.log(`[DEBUG] Día ${dateStr} (${entity}): ${start}-${end} (weekly+global)`);
         return{type:'standard',start,end};
     }
     // 6) Global custom (empleada sin weekly)
@@ -288,6 +322,9 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
             if(w.closed){
                 console.log(`[DEBUG] Día ${dateStr} (${entity}): Cerrado por horario SEMANAL GLOBAL (día ${day}).`);
                 return{type:'closed'};
+            }
+            if(w.type === 'split') {
+                return { type: 'split', start: w.start, end: w.end, start2: w.start2, end2: w.end2 };
             }
             console.log(`[DEBUG] Día ${dateStr} (${entity}): Horario semanal global ${w.start}-${w.end}`);
             return{type:'standard',start:w.start,end:w.end};
