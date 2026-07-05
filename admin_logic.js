@@ -1229,10 +1229,26 @@ document.getElementById('local-custom-fields').classList.toggle('hidden',type!==
 const splitFields=document.getElementById('local-split-extra');if(splitFields)splitFields.classList.toggle('hidden',type!=='split')};
 // ── CIERRES DE HORA — Añadir / Eliminar / Renderizar ────────────────────────
 window.addClosedHour=()=>{};
-window.removeClosedHour=(idx)=>{
+window.removeClosedHour=async(idx)=>{
   if(!confirm('¿Eliminar este cierre de horas?'))return;
   tmpClosedHours.splice(idx,1);
-  window.renderClosedHoursList();
+  let sd={...(config.specialDays||{})};
+  if(!sd[selectedDayInModal])sd[selectedDayInModal]={};
+  if(tmpClosedHours.length>0){
+    sd[selectedDayInModal].closedHours=tmpClosedHours;
+  }else{
+    delete sd[selectedDayInModal].closedHours;
+  }
+  if(Object.keys(sd[selectedDayInModal]||{}).length===0)delete sd[selectedDayInModal];
+  try {
+    const docRef = doc(db, 'artifacts', AID, 'public', 'data', 'settings', 'main');
+    await updateDoc(docRef, { specialDays: sd });
+    config.specialDays = sd;
+    window.renderClosedHoursList();
+    if(currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+  } catch(e) {
+    alert('Error al eliminar cierre: ' + e.message);
+  }
 };
 window.renderClosedHoursList=()=>{
   const container=document.getElementById('local-closed-hours-section');
@@ -2135,11 +2151,7 @@ window.updateConfigMultiActionBar = () => {
             const empName = emp ? emp.name : '';
             buttonHtml = `<button onclick="window.openBlockModal('${empName.replace(/'/g,"\\'")}', '${Array.from(selectedConfigDays)[0]}')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">🔒 Bloquear Horario</button>`;
         } else {
-            if (selectedConfigDays.size === 1) {
-                buttonHtml = `<button onclick="window.openConfigDay('${Array.from(selectedConfigDays)[0]}')" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
-            } else {
-                buttonHtml = `<button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
-            }
+            buttonHtml = `<button onclick="window.openMultiDayModal()" class="px-4 py-2 bg-orange-500 hover:bg-orange-600 rounded-xl font-bold text-xs uppercase transition-colors pointer-events-auto">⚙️ Configurar</button>`;
         }
 
         bar.innerHTML = `
@@ -2164,17 +2176,32 @@ window.clearConfigSelection = () => {
 };
 
 window.openMultiDayModal = () => {
+    // Hide action bar when opening modal
+    document.getElementById('config-multi-action-bar')?.classList.add('opacity-0', 'pointer-events-none');
+
     document.getElementById('config-multi-day-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('config-multi-day-modal').classList.remove('opacity-0'), 10);
     const entity = (currentTab === 'config') ? 'global' : currentTab.replace('calendar_emp_', '');
     document.getElementById('cmd-entity').value = entity;
-    document.getElementById('cmd-title').innerText = `Configurar ${selectedConfigDays.size} días`;
+    
+    const days = Array.from(selectedConfigDays);
+    const firstDay = days[0];
+    selectedDayInModal = firstDay; // Track day for potential single day updates
+
+    document.getElementById('cmd-title').innerText = days.length === 1 ? `Configurar Día: ${firstDay}` : `Configurar ${days.length} días`;
     const empName = entity === 'global' ? 'Global' : (getEmpById(entity)?.name || entity);
     document.getElementById('cmd-subtitle').innerText = empName;
 
+    // Cargar cierres de hora para este día único (si aplica)
+    tmpClosedHours = [];
+    if (days.length === 1 && firstDay) {
+        tmpClosedHours = [...(config.specialDays?.[firstDay]?.closedHours || [])];
+        window.renderClosedHoursList();
+    } else {
+        document.getElementById('local-closed-hours-section')?.classList.add('hidden');
+    }
+
     // Cargar horario configurado del primer día seleccionado (si existe) para no sobreescribir con valores por defecto
-    const days = Array.from(selectedConfigDays);
-    const firstDay = days[0];
     let type = 'continuous';
     let s1 = '09:00', e1 = '14:00';
     let s2 = '16:00', e2 = '20:00';
@@ -2209,6 +2236,7 @@ window.openMultiDayModal = () => {
 window.closeMultiDayModal = () => {
     document.getElementById('config-multi-day-modal').classList.add('opacity-0');
     setTimeout(() => document.getElementById('config-multi-day-modal').classList.add('hidden'), 200);
+    window.clearConfigSelection();
 };
 
 window.toggleCmdShiftType = () => {
