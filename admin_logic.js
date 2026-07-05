@@ -54,6 +54,11 @@ const getSvcByName=name=>servicesDB.find(s=>s.name===name);
 window.closeModal=()=>document.getElementById('modal').classList.add('hidden');
 window.closeDayModal=()=>document.getElementById('day-modal').classList.add('hidden');
 window.closeConfigDayModal=()=>document.getElementById('config-day-modal').classList.add('hidden');
+window.openClosuresInfoModal=()=>{
+  document.getElementById('closures-info-modal').classList.remove('hidden');
+  if(window.lucide)lucide.createIcons();
+};
+window.closeClosuresInfoModal=()=>document.getElementById('closures-info-modal').classList.add('hidden');
 window.acceptGDPR=()=>{localStorage.setItem('gdpr_consent',new Date().toISOString());document.getElementById('gdpr-banner').classList.add('hidden')};
 window.checkGDPR=()=>{if(!localStorage.getItem('gdpr_consent'))document.getElementById('gdpr-banner').classList.remove('hidden')};
 // ---- SERVICES CRUD ----
@@ -995,6 +1000,11 @@ frag.appendChild(div)}body.appendChild(frag);if(window.lucide)lucide.createIcons
 // ---- RENDER MAIN ----
 window.render=()=>{try{console.log("🛠️ window.render() llamado, currentTab:",currentTab," specialistViewLevel:",specialistViewLevel);
 const months=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];const label=document.getElementById('current-view-label');const title=document.getElementById('view-title');if(!label||!title){console.warn('render: Missing DOM elements (current-view-label or view-title)');return}
+const btnInfo = document.getElementById('btn-info-closures');
+if (btnInfo) {
+    const isCalendarOrConfig = currentTab.startsWith('calendar') || currentTab === 'config';
+    btnInfo.classList.toggle('hidden', !isCalendarOrConfig);
+}
 if(currentTab==='billing'&&incomeChart&&typeof incomeChart.destroy==='function'){incomeChart.destroy();incomeChart=null;}
 if(currentTab==='calendar_all'){if(specialistViewLevel==='global-day')window.renderGlobalDay();else{label.innerText=`${months[currentViewDate.getMonth()]} ${currentViewDate.getFullYear()}`;title.innerText="Agenda Global";document.getElementById('view-global-day').classList.add('hidden');const calView=document.getElementById('view-calendar');calView.classList.remove('hidden');renderMonthGrid('calendar-body',false)}}
 else if(currentTab.startsWith('calendar_emp_')){const eid=currentTab.replace('calendar_emp_','');const emp=getEmpById(eid);label.innerText=`${months[currentViewDate.getMonth()]} ${currentViewDate.getFullYear()}`;title.innerText=`Calendario: ${emp?emp.name:''}`;renderMonthGrid('calendar-body',false)}

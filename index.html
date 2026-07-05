@@ -325,7 +325,12 @@
                 <div class="flex items-center gap-3">
                     <button id="btn-back-to-month" onclick="window.backToMonth()" class="hidden p-2 bg-white border rounded-xl hover:opacity-80 transition-opacity" style="border-color:var(--brown-light)"><i data-lucide="arrow-left" class="w-5 h-5" style="color:var(--brown-mid)"></i></button>
                     <div>
-                        <h2 id="view-title" class="font-serif text-3xl italic font-semibold tracking-tight" style="color:var(--brown)">Agenda Global</h2>
+                        <div class="flex items-center gap-2">
+                            <h2 id="view-title" class="font-serif text-3xl italic font-semibold tracking-tight" style="color:var(--brown)">Agenda Global</h2>
+                            <button id="btn-info-closures" onclick="window.openClosuresInfoModal()" class="p-1.5 rounded-full hover:bg-slate-200/50 transition-all flex items-center justify-center text-slate-400 hover:text-slate-600 outline-none" title="Información sobre cierres y bloqueos">
+                                <i data-lucide="info" class="w-5 h-5"></i>
+                            </button>
+                        </div>
                         <p id="view-subtitle" class="text-xs font-medium" style="color:var(--brown-mid)">Gestión de Clínica Estética UNIR</p>
                     </div>
                 </div>
@@ -1147,6 +1152,85 @@
                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Restaurar a Normal
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Información sobre Cierres -->
+    <div id="closures-info-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[32px] w-full max-w-xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b flex items-center justify-between bg-slate-50">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                        <i data-lucide="info" class="w-4 h-4 text-orange-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-serif italic font-bold text-lg text-slate-800">Guía de Cierres y Horarios</h3>
+                        <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Opciones de configuración</p>
+                    </div>
+                </div>
+                <button onclick="window.closeClosuresInfoModal()" class="p-2 hover:bg-slate-200/50 rounded-xl transition-colors text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-6 overflow-y-auto custom-scroll text-sm text-slate-600">
+                <!-- Horario Semanal -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-indigo-700 font-black uppercase text-xs">
+                        <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                        1. Horario Semanal Regular
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-500">
+                        Define la jornada base que se repite semana tras semana. Se configura en la pestaña de <strong>Configuración</strong> en la barra lateral.
+                    </p>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-slate-500 pl-2">
+                        <li><strong>Global (Centro):</strong> Define el horario general de apertura del salón.</li>
+                        <li><strong>Individual (Empleado):</strong> Si una empleada tiene su propio horario semanal (por ejemplo, turnos rotativos), se configurará en su pestaña.</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-100">
+                
+                <!-- Días Especiales -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-rose-700 font-black uppercase text-xs">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        2. Días Especiales, Festivos y Cierres Globales
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-500">
+                        Para cerrar días concretos (festivos, vacaciones) o cambiar el horario de una fecha específica. Se organiza desde la pestaña <strong>Configuración</strong>.
+                    </p>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-slate-500 pl-2">
+                        <li>Haz clic en un día (o arrastra para seleccionar varios) para abrir el gestor.</li>
+                        <li><strong>Cerrar Día (Día Completo):</strong> Cierra la agenda para esa fecha.</li>
+                        <li><strong>Horario Especial / Jornada Partida:</strong> Configura un tramo personalizado para ese día.</li>
+                        <li>Las modificaciones a nivel <strong>Global</strong> cierran el salón y se heredan por todas las empleadas, a menos que tengan un override manual.</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-100">
+                
+                <!-- Bloqueos Rápidos -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-orange-700 font-black uppercase text-xs">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        3. Bloqueos de Horas (Agenda)
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-500">
+                        Se usan para bloquear huecos rápidos en el día a día (descansos, reuniones, asuntos personales) directamente desde la agenda de citas.
+                    </p>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-slate-500 pl-2">
+                        <li>Haz doble clic sobre el día en el calendario de la especialista y pulsa en <strong>🔒 Bloquear</strong>.</li>
+                        <li>Puedes bloquear un tramo de horas o marcar <strong>Día Completo</strong>.</li>
+                        <li>Soporta <strong>Recurrencia</strong> (diaria, semanal, bisemanal) para bloqueos periódicos.</li>
+                        <li><strong>Restaurar Horario:</strong> Si deseas eliminar el bloqueo, haz clic en el botón naranja <code>🔁 Restaurar</code> que aparece en la celda del calendario mensual o en la cabecera de la ficha diaria.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="p-6 bg-slate-50 border-t flex justify-end">
+                <button onclick="window.closeClosuresInfoModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-colors">
+                    Entendido
+                </button>
             </div>
         </div>
     </div>
