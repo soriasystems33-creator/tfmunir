@@ -941,7 +941,13 @@ if(isConfig){
       <div class="text-red-400 text-[10px] font-black uppercase italic flex items-center gap-1 mt-2">
         <i data-lucide="ban" class="w-3 h-3"></i> CERRADO
       </div>
-      <div class="flex-1"></div>
+      <button onclick="event.stopPropagation(); window.restoreDayForEmp('${ds}', '${entity}')"
+              style="margin-top: 4px; background: #ef4444; color: white; border: none; padding: 3px 6px; border-radius: 6px; font-size: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; width: fit-content; z-index: 20;"
+              onmouseover="this.style.background='#dc2626'"
+              onmouseout="this.style.background='#ef4444'">
+        Restaurar
+      </button>
+      <div class="flex-grow"></div>
       <div class="text-red-400 text-[10px] font-black uppercase text-center mb-1 tracking-widest">CERRADO</div>
     `;
   } else if (hasFullDayBlock) {
@@ -995,7 +1001,7 @@ if(selectedConfigDays.has(ds)) {
     div.style.boxShadow = "inset 0 0 0 4px #f97316";
     div.style.backgroundColor = "#fff7ed";
 }
-frag.appendChild(div)}body.appendChild(frag);if(window.lucide)lucide.createIcons()}catch(err){console.error("❌ ERROR CRÍTICO EN renderMonthGrid:",err)}};
+frag.appendChild(div)}body.appendChild(frag);if(isConfig&&cid==='config-calendar-body'){setTimeout(()=>window.updateClosuresSummary(),0)}if(window.lucide)lucide.createIcons()}catch(err){console.error("❌ ERROR CRÍTICO EN renderMonthGrid:",err)}};
 
 // ---- RENDER MAIN ----
 window.render=()=>{try{console.log("🛠️ window.render() llamado, currentTab:",currentTab," specialistViewLevel:",specialistViewLevel);
@@ -3078,6 +3084,114 @@ window.renderExpenses=()=>{
       <span style="color:#e05c6a;font-size:14px">Total: <strong>${total.toFixed(2).replace('.',',')} €</strong></span>
     </div>
   </div>`;
+};
+
+// ── SUMMARY CARD AND RESTORE ALL ACTIONS ─────────────────────────────
+window.updateClosuresSummary = () => {
+  const container = document.getElementById('closures-summary-card');
+  const listEl = document.getElementById('closures-summary-list');
+  const restoreAllBtn = document.getElementById('btn-restore-all-month-closed');
+  if (!container || !listEl) return;
+
+  const y = currentViewDate.getFullYear();
+  const mo = currentViewDate.getMonth();
+  const dim = new Date(y, mo + 1, 0).getDate();
+  const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  
+  const closedEntries = [];
+  
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    // Check global closure
+    if (config.specialDays?.[ds]?.global?.closed === true || config.specialDays?.[ds]?.global?.type === 'closed') {
+      closedEntries.push({ date: ds, entity: 'global' });
+    }
+    // Check specialists closures
+    employeesDB.forEach(emp => {
+      if (config.specialDays?.[ds]?.[emp.name]?.closed === true || config.specialDays?.[ds]?.[emp.name]?.type === 'closed') {
+        closedEntries.push({ date: ds, entity: emp.name });
+      } else if (config.specialDays?.[ds]?.[emp.id]?.closed === true || config.specialDays?.[ds]?.[emp.id]?.type === 'closed') {
+        closedEntries.push({ date: ds, entity: emp.name });
+      }
+    });
+  }
+
+  // Deduplicate entries by date + entity
+  const seen = new Set();
+  const uniqueEntries = closedEntries.filter(el => {
+    const key = `${el.date}_${el.entity}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (uniqueEntries.length === 0) {
+    listEl.innerHTML = '<div class="col-span-full text-center text-slate-400 text-xs italic py-4">No hay días cerrados en este mes.</div>';
+    if (restoreAllBtn) restoreAllBtn.classList.add('hidden');
+    return;
+  }
+
+  if (restoreAllBtn) restoreAllBtn.classList.remove('hidden');
+
+  listEl.innerHTML = uniqueEntries.map(entry => {
+    const [year, month, day] = entry.date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const dayStr = dateObj.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+    const entityName = entry.entity === 'global' ? 'Global' : (employeesDB.find(e => e.id === entry.entity || e.name.toLowerCase() === entry.entity.toLowerCase())?.name || entry.entity);
+    return `
+      <div class="p-3 rounded-2xl border flex items-center justify-between bg-slate-50 border-slate-100 text-xs font-bold text-slate-700">
+        <div class="flex flex-col gap-1">
+          <span class="text-slate-800 capitalize">${dayStr}</span>
+          <span class="text-[9px] px-2 py-0.5 rounded-full uppercase font-black bg-red-100 text-red-700 w-fit">${entityName}</span>
+        </div>
+        <button onclick="window.restoreDayForEmp('${entry.date}', '${entry.entity}')" class="p-1.5 hover:bg-red-50 rounded-xl text-red-500 transition-colors flex items-center justify-center" title="Restaurar horario estándar">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+};
+
+window.restoreAllClosedDaysInMonth = async () => {
+  const y = currentViewDate.getFullYear();
+  const mo = currentViewDate.getMonth();
+  const months = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  if (!confirm(`¿Restaurar todos los días cerrados de ${months[mo]} ${y} a su horario normal?`)) return;
+
+  const dim = new Date(y, mo + 1, 0).getDate();
+  let sd = { ...(config.specialDays || {}) };
+
+  for (let d = 1; d <= dim; d++) {
+    const ds = `${y}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (sd[ds]) {
+      // Delete global closure
+      if (sd[ds].global?.closed === true || sd[ds].global?.type === 'closed') {
+        delete sd[ds].global;
+      }
+      // Delete specialists closures
+      employeesDB.forEach(emp => {
+        if (sd[ds][emp.name]?.closed === true || sd[ds][emp.name]?.type === 'closed') {
+          delete sd[ds][emp.name];
+        }
+        if (sd[ds][emp.id]?.closed === true || sd[ds][emp.id]?.type === 'closed') {
+          delete sd[ds][emp.id];
+        }
+      });
+      if (Object.keys(sd[ds]).length === 0) delete sd[ds];
+    }
+  }
+
+  try {
+    await updateDoc(doc(db, 'artifacts', AID, 'public', 'data', 'settings', 'main'), { specialDays: sd });
+    config.specialDays = sd;
+    if (currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+    else window.render();
+    window.updateClosuresSummary();
+  } catch (e) {
+    alert('Error al restaurar días cerrados: ' + e.message);
+  }
 };
 
 // ══════════════════════════════════════════════════════════════
