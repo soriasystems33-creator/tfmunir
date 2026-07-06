@@ -2332,7 +2332,7 @@ window.toggleEmpConfigMode = () => {
     } else {
         btn.classList.replace('bg-orange-500', 'bg-orange-100');
         btn.classList.replace('text-white', 'text-orange-700');
-        btn.innerHTML = '<i data-lucide="settings" class="w-4 h-4"></i> Configurar Días Libres';
+        btn.innerHTML = '<i data-lucide="settings" class="w-4 h-4"></i> Configurar Varios Días';
         calBody.classList.remove('ring-4', 'ring-orange-200');
         selectedConfigDays.clear();
         window.updateConfigMultiActionBar();
