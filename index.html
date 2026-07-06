@@ -631,20 +631,6 @@
                     <div id="config-calendar-body" class="calendar-grid rounded-2xl overflow-hidden" style="border:1px solid var(--brown-light)"></div>
                 </div>
 
-                <!-- RESUMEN DE CIERRES DEL MES -->
-                <div id="closures-summary-card" class="bg-white p-8 rounded-3xl shadow-sm border space-y-4" style="border-color:var(--brown-light)">
-                    <div class="flex justify-between items-center pb-4 border-b border-slate-100">
-                        <h3 class="font-serif italic font-semibold text-xl flex items-center gap-3" style="color:var(--brown)">
-                            <i data-lucide="info" class="w-5 h-5 text-indigo-500"></i> Resumen de Días Cerrados de este Mes
-                        </h3>
-                        <button onclick="window.restoreAllClosedDaysInMonth()" class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-xs uppercase transition-colors shadow-md hidden" id="btn-restore-all-month-closed">
-                            🔄 Restaurar Todos
-                        </button>
-                    </div>
-                    <div id="closures-summary-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        <!-- Dinámico -->
-                    </div>
-                </div>
             </div>
 
             <!-- VISTA TPV -->
@@ -1213,6 +1199,18 @@
                     Entendido
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal Éxito Configuración -->
+    <div id="config-success-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl border border-slate-100 flex flex-col p-6 text-center space-y-4">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl">✓</div>
+            <h3 class="font-serif italic font-bold text-xl text-slate-800">Acción Confirmada</h3>
+            <div id="config-success-summary" class="text-xs font-bold text-slate-500 space-y-2 py-2">
+                <!-- Resumen dinámico -->
+            </div>
+            <button onclick="window.closeConfigSuccessModal()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-colors">Aceptar</button>
         </div>
     </div>
 
