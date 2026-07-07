@@ -1763,8 +1763,8 @@ const isEmpBusy=(empName,start,end)=>{
 let bs=null,be=null;
 const checkEmps=isMulti?empNames:(empNames.length===1?empNames:[]);
 if(checkEmps.length>0){
-  checkEmps.forEach(en=>{const dc=getDailyConfig(date,en);if(dc.type!=='closed'){const s=dc.start||config.start||"09:00",e=dc.end||config.end||"20:00";if(bs===null||t2m(s)<bs)bs=t2m(s);if(be===null||t2m(e)>be)be=t2m(e)}});
-}else{const dc=getDailyConfig(date,'global');if(dc.type!=='closed'){bs=t2m(dc.start||config.start||"09:00");be=t2m(dc.end||config.end||"20:00")}}
+  checkEmps.forEach(en=>{const dc=getDailyConfig(date,en);if(dc.type!=='closed'){const s=dc.start||config.start||"09:00";const e=dc.type==='split'?(dc.end2||dc.end||config.end||"20:00"):(dc.end||config.end||"20:00");if(bs===null||t2m(s)<bs)bs=t2m(s);if(be===null||t2m(e)>be)be=t2m(e)}});
+}else{const dc=getDailyConfig(date,'global');if(dc.type!=='closed'){bs=t2m(dc.start||config.start||"09:00");be=t2m(dc.type==='split'?(dc.end2||dc.end||config.end||"20:00"):(dc.end||config.end||"20:00"))}}
 if(bs===null){bs=t2m("09:00");be=t2m("20:00")}
 const dur=isMulti?maxDur:totalDur;
 for(let t=bs;t+dur<=be;t+=15){
@@ -1775,7 +1775,9 @@ for(let t=bs;t+dur<=be;t+=15){
       const dc=getDailyConfig(date,en);if(dc.type==='closed')return false;
       const eS=t2m(dc.start||config.start||"09:00"),eE=t2m(dc.end||config.end||"20:00");
       const eDur=empDurs[en];
-      if(t<eS||t+eDur>eE)return false;
+      let inShift = (t>=eS && t+eDur<=eE);
+      if(dc.type==='split'&&dc.start2&&dc.end2){const eS2=t2m(dc.start2),eE2=t2m(dc.end2);if(t>=eS2&&t+eDur<=eE2)inShift=true;}
+      if(!inShift)return false;
       const closedH=window.getClosedHoursForDay(date,en);
       if(closedH.some(ch=>ch.entity==='global'||ch.entity===en)){const chFrom=t2m(ch.from),chTo=t2m(ch.to);if(t<chTo&&t+eDur>=chFrom)return false}
       return !isEmpBusy(en,t,t+eDur);
@@ -1784,7 +1786,9 @@ for(let t=bs;t+dur<=be;t+=15){
     const empName=empNames[0]||'';
     const dc=getDailyConfig(date,empName||'global');if(dc.type==='closed'){free=false}else{
       const eS=t2m(dc.start||config.start||"09:00"),eE=t2m(dc.end||config.end||"20:00");
-      if(t>=eS&&t+dur<=eE){
+      let inShift = (t>=eS && t+dur<=eE);
+      if(dc.type==='split'&&dc.start2&&dc.end2){const eS2=t2m(dc.start2),eE2=t2m(dc.end2);if(t>=eS2&&t+dur<=eE2)inShift=true;}
+      if(inShift){
         const closedH=window.getClosedHoursForDay(date,empName);
         var chBlocked=closedH.some(function(ch){var chFrom=t2m(ch.from),chTo=t2m(ch.to);return t<chTo&&t+dur>=chFrom});
         if(!chBlocked&&!isEmpBusy(empName,t,t+dur))free=true;
