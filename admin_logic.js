@@ -2216,6 +2216,34 @@ window.openMultiDayModal = () => {
     let s1 = '09:00', e1 = '14:00';
     let s2 = '16:00', e2 = '20:00';
     
+    // Fallback: cargar del horario semanal genérico según el día de la semana
+    if (firstDay) {
+        const dayNum = parseDate(firstDay).getDay(); // 0: Dom, 1: Lun, ..., 6: Sáb
+        let w = null;
+        if (entity !== 'global') {
+            const ew = config[`weekly_${entity}`];
+            if (ew && ew[dayNum]) {
+                w = ew[dayNum];
+            }
+        }
+        if (!w && config.weekly && config.weekly[dayNum]) {
+            w = config.weekly[dayNum];
+        }
+        
+        if (w) {
+            type = (w.type === 'split') ? 'split' : 'continuous';
+            s1 = w.start || '09:00';
+            e1 = w.end || (type === 'split' ? '14:00' : '20:00');
+            if (w.type === 'split') {
+                s2 = w.start2 || '16:00';
+                e2 = w.end2 || '20:00';
+            } else {
+                s2 = '16:00';
+                e2 = w.end || '20:00';
+            }
+        }
+    }
+    
     if (firstDay && config.specialDays?.[firstDay]?.[entity]) {
         const se = config.specialDays[firstDay][entity];
         if (se.start && se.end) {
@@ -2230,6 +2258,7 @@ window.openMultiDayModal = () => {
                 s2 = String(h).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
                 e2 = se.end;
             } else {
+                type = 'continuous';
                 e1 = se.end;
             }
         }
