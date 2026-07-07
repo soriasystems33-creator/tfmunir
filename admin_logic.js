@@ -1133,6 +1133,14 @@ if (calendarSection) {
         calendarSection.classList.add('hidden');
     }
 }
+const warningEl = document.getElementById('employee-closure-warning');
+if (warningEl) {
+    if (configEntity !== 'global') {
+        warningEl.classList.remove('hidden');
+    } else {
+        warningEl.classList.add('hidden');
+    }
+}
 };
 window.setConfigEntity=e=>{configEntity=e;window.renderStandardInputs();window.renderConfigEntityTabs();renderMonthGrid('config-calendar-body',true)};
 window.renderStandardInputs=()=>{const c=document.getElementById('standard-inputs-container');if(!c)return;
