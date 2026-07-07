@@ -1125,6 +1125,14 @@ employeesDB.forEach(e=>{
     html+=`<button onclick="window.setConfigEntity('${e.name}')" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity===e.name?'bg-white shadow-sm':'text-slate-400 hover:bg-slate-200'}">${e.name}</button>`;
 });
 c.innerHTML=html;
+const calendarSection = document.getElementById('config-calendar-section');
+if (calendarSection) {
+    if (configEntity === 'global') {
+        calendarSection.classList.remove('hidden');
+    } else {
+        calendarSection.classList.add('hidden');
+    }
+}
 };
 window.setConfigEntity=e=>{configEntity=e;window.renderStandardInputs();window.renderConfigEntityTabs();renderMonthGrid('config-calendar-body',true)};
 window.renderStandardInputs=()=>{const c=document.getElementById('standard-inputs-container');if(!c)return;
