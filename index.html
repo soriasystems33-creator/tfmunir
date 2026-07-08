@@ -325,7 +325,12 @@
                 <div class="flex items-center gap-3">
                     <button id="btn-back-to-month" onclick="window.backToMonth()" class="hidden p-2 bg-white border rounded-xl hover:opacity-80 transition-opacity" style="border-color:var(--brown-light)"><i data-lucide="arrow-left" class="w-5 h-5" style="color:var(--brown-mid)"></i></button>
                     <div>
-                        <h2 id="view-title" class="font-serif text-3xl italic font-semibold tracking-tight" style="color:var(--brown)">Agenda Global</h2>
+                        <div class="flex items-center gap-2">
+                            <h2 id="view-title" class="font-serif text-3xl italic font-semibold tracking-tight" style="color:var(--brown)">Agenda Global</h2>
+                            <button id="btn-info-closures" onclick="window.openClosuresInfoModal()" class="p-1.5 rounded-full hover:bg-slate-200/50 transition-all flex items-center justify-center text-slate-400 hover:text-slate-600 outline-none" title="Información sobre cierres y bloqueos">
+                                <i data-lucide="info" class="w-5 h-5"></i>
+                            </button>
+                        </div>
                         <p id="view-subtitle" class="text-xs font-medium" style="color:var(--brown-mid)">Gestión de Clínica Estética UNIR</p>
                     </div>
                 </div>
@@ -333,7 +338,7 @@
                     <button onclick="window.changeDate(-1)" class="p-2 rounded-lg border bg-white hover:opacity-80 transition-opacity" style="border-color:var(--brown-light)"><i data-lucide="chevron-left" class="w-5 h-5" style="color:var(--brown-mid)"></i></button>
                     <span id="current-view-label" class="text-base font-bold min-w-[150px] text-center capitalize" style="color:var(--brown)">Hoy</span>
                     <button onclick="window.changeDate(1)" class="p-2 rounded-lg border bg-white hover:opacity-80 transition-opacity" style="border-color:var(--brown-light)"><i data-lucide="chevron-right" class="w-5 h-5" style="color:var(--brown-mid)"></i></button>
-                    <button id="btn-toggle-config-mode" onclick="window.toggleEmpConfigMode()" class="hidden ml-4 px-5 py-2.5 rounded-xl font-semibold items-center gap-2 shadow-md active:scale-95 transition-all text-xs uppercase tracking-widest text-orange-700 bg-orange-100 border border-orange-200"><i data-lucide="settings" class="w-4 h-4"></i> Configurar Días Libres</button>
+                    <button id="btn-toggle-config-mode" onclick="window.toggleEmpConfigMode()" class="hidden ml-4 px-5 py-2.5 rounded-xl font-semibold items-center gap-2 shadow-md active:scale-95 transition-all text-xs uppercase tracking-widest text-orange-700 bg-orange-100 border border-orange-200"><i data-lucide="settings" class="w-4 h-4"></i> Configurar Varios Días</button>
                     <button onclick="window.openModal()" class="ml-4 px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 shadow-md active:scale-95 transition-all text-xs uppercase tracking-widest text-white" style="background:var(--green-deep)"><i data-lucide="plus" class="w-4 h-4"></i> Nueva Cita</button>
                 </div>
             </div>
@@ -614,17 +619,22 @@
                     </div>
                     <div id="global-config-section" class="space-y-6">
                         <div id="standard-inputs-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                        <div id="employee-closure-warning" class="hidden p-4 bg-orange-50 border-2 border-orange-200 text-orange-900 text-xs font-bold rounded-2xl flex items-center gap-3">
+                            <i data-lucide="info" class="w-5 h-5 text-orange-500 shrink-0"></i>
+                            <span>Para configurar días festivos o cierres de horas específicos de esta empleada, ve al apartado de <strong>Especialistas / Empleados</strong> en el menú.</span>
+                        </div>
                         <div class="flex justify-end pt-4" style="border-top:1px solid var(--cream-dark)">
                             <button id="btn-save-config" class="text-white px-8 py-3 rounded-2xl font-semibold text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all" style="background:var(--green-deep)">Guardar Configuración</button>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white p-8 rounded-3xl shadow-sm border" style="border-color:var(--brown-light)">
+                <div id="config-calendar-section" class="bg-white p-8 rounded-3xl shadow-sm border" style="border-color:var(--brown-light)">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-serif italic font-semibold text-xl flex items-center gap-3" style="color:var(--brown)"><i data-lucide="calendar-check" class="w-5 h-5"></i> Gestor de Cierres y Días Especiales (Global)</h3>
                     </div>
                     <div id="config-calendar-body" class="calendar-grid rounded-2xl overflow-hidden" style="border:1px solid var(--brown-light)"></div>
                 </div>
+
             </div>
 
             <!-- VISTA TPV -->
@@ -782,49 +792,7 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIG DÍA -->
-    <div id="config-day-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-        <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl flex flex-col" style="border:1px solid var(--brown-light);max-height:92vh">
-            <div class="p-6 pb-0 shrink-0">
-                <h3 id="config-day-title" class="font-serif italic font-semibold text-xl mb-1" style="color:var(--brown)">Personalizar Día</h3>
-                <p id="config-day-entity" class="text-[10px] mb-4 uppercase tracking-widest italic font-bold" style="color:var(--green-deep)"></p>
-            </div>
-            <div class="flex-grow overflow-y-auto px-6 pb-2 custom-scroll">
-                <!-- ═══ SECCIÓN 1: TIPO DE JORNADA ═══ -->
-                <div class="rounded-2xl border-2 p-4" style="border-color:var(--brown-light);background:#fcfaf7">
-                    <h4 class="font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-3" style="color:var(--brown)">
-                        <i data-lucide="calendar" class="w-3.5 h-3.5" style="color:var(--green-deep)"></i> Tipo de jornada
-                    </h4>
-                    <div class="space-y-2">
-                        <button onclick="window.setLocalConfigType('standard')" id="btn-local-standard" class="w-full p-3.5 border-2 rounded-2xl font-bold text-left flex justify-between items-center transition-all text-xs" style="border-color:var(--brown-light);color:var(--brown);background:white">
-                            <span class="flex items-center gap-2.5"><i data-lucide="unlock" class="w-4 h-4" style="color:var(--green-deep)"></i> Abierto — horario normal (semanal)</span>
-                            <span id="badge-local-standard" class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase" style="background:#e8f4f8;color:var(--green-deep);display:none">ACTIVO</span>
-                        </button>
-                        <button onclick="window.setLocalConfigType('closed')" id="btn-local-closed" class="w-full p-3.5 border-2 rounded-2xl font-bold text-left flex justify-between items-center transition-all text-xs" style="border-color:var(--brown-light);color:var(--brown);background:white">
-                            <span class="flex items-center gap-2.5"><i data-lucide="lock" class="w-4 h-4" style="color:#ef4444"></i> Cerrado — no se atiende este día</span>
-                            <span id="badge-local-closed" class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase" style="background:#fef2f2;color:#ef4444;display:none">ACTIVO</span>
-                        </button>
-                        <button onclick="window.setLocalConfigType('custom')" id="btn-local-custom" class="w-full p-3.5 border-2 rounded-2xl font-bold text-left flex justify-between items-center transition-all text-xs" style="border-color:var(--brown-light);color:var(--brown);background:white">
-                            <span class="flex items-center gap-2.5"><i data-lucide="clock" class="w-4 h-4" style="color:#8b5cf6"></i> Horario personalizado — abrir con horario distinto</span>
-                            <span id="badge-local-custom" class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase" style="background:#f0f0ff;color:#8b5cf6;display:none">ACTIVO</span>
-                        </button>
-                    </div>
-                    <div id="local-custom-fields" class="hidden mt-3 p-3.5 rounded-xl border space-y-3 text-xs font-bold uppercase" style="background:white;border-color:var(--brown-light)">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div><label class="text-[9px] mb-1 block" style="color:var(--brown-mid)">Apertura</label><input type="time" id="local-start" class="w-full p-2 border rounded-xl font-medium bg-white outline-none" style="border-color:var(--brown-light);color:var(--brown)"></div>
-                            <div><label class="text-[9px] mb-1 block" style="color:var(--brown-mid)">Cierre</label><input type="time" id="local-end" class="w-full p-2 border rounded-xl font-medium bg-white outline-none" style="border-color:var(--brown-light);color:var(--brown)"></div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Nota: Los bloqueos individuales se gestionan desde la agenda de cada especialista -->
-            </div>
-            <div class="flex gap-3 px-6 py-4 shrink-0" style="border-top:1px solid var(--brown-light)">
-                <button onclick="window.closeConfigDayModal()" class="flex-1 py-3 rounded-xl font-semibold uppercase text-xs" style="color:var(--brown-mid);background:#f5f2ef">CANCELAR</button>
-                <button id="btn-apply-day" class="flex-1 py-3 rounded-2xl shadow-md font-semibold uppercase text-xs text-white active:scale-95 transition-all" style="background:var(--green-deep)">GUARDAR CAMBIOS</button>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL SERVICIO -->
     <div id="service-modal" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-[70] backdrop-blur-sm">
@@ -1060,7 +1028,7 @@
                     </select>
                 </div>
 
-                <div>
+                <div class="hidden">
                     <label class="block text-xs font-bold uppercase mb-2" style="color:var(--brown)">Repetición</label>
                     <select id="block-recurrence" onchange="toggleBlockRecurrenceEnd()" class="w-full p-4 rounded-2xl border-2 font-bold text-sm bg-transparent appearance-none" style="border-color:var(--brown-light);color:var(--brown)">
                         <option value="none">Solo este día</option>
@@ -1147,10 +1115,109 @@
                         <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Restaurar a Normal
                     </button>
                 </div>
+
+                <!-- SECCIÓN 3: CIERRES DE HORA (LEGACY) -->
+                <div id="local-closed-hours-section" class="hidden pt-4 border-t border-slate-200">
+                    <h4 class="font-black text-[10px] uppercase tracking-widest flex items-center gap-2 mb-3" style="color:var(--brown)">
+                        <i data-lucide="clock" class="w-3.5 h-3.5" style="color:#ef4444"></i> Cierres de Hora Guardados
+                    </h4>
+                    <div id="local-closed-hours-list" class="space-y-2"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="admin_logic.js?v=20260622_V14"></script>
+    <!-- Modal Información sobre Cierres -->
+    <div id="closures-info-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[32px] w-full max-w-xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[85vh]">
+            <div class="p-6 border-b flex items-center justify-between bg-slate-50">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center">
+                        <i data-lucide="info" class="w-4 h-4 text-orange-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-serif italic font-bold text-lg text-slate-800">Guía de Cierres y Horarios</h3>
+                        <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Opciones de configuración</p>
+                    </div>
+                </div>
+                <button onclick="window.closeClosuresInfoModal()" class="p-2 hover:bg-slate-200/50 rounded-xl transition-colors text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-6 overflow-y-auto custom-scroll text-sm text-slate-600">
+                <!-- Horario Semanal -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-indigo-700 font-black uppercase text-xs">
+                        <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                        1. Horario Semanal Regular
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-500">
+                        Define la jornada base que se repite semana tras semana. Se configura en la pestaña de <strong>Configuración</strong> en la barra lateral.
+                    </p>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-slate-500 pl-2">
+                        <li><strong>Global (Centro):</strong> Define el horario general de apertura del salón.</li>
+                        <li><strong>Individual (Empleado):</strong> Si una empleada tiene su propio horario semanal (por ejemplo, turnos rotativos), se configurará en su pestaña.</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-100">
+                
+                <!-- Días Especiales -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-rose-700 font-black uppercase text-xs">
+                        <i data-lucide="calendar-check" class="w-4 h-4"></i>
+                        2. Días Especiales, Festivos y Cierres Globales
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-500">
+                        Para cerrar días concretos (festivos, vacaciones) o cambiar el horario de una fecha específica. Se organiza desde la pestaña <strong>Configuración</strong>.
+                    </p>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-slate-500 pl-2">
+                        <li>Haz clic en un día (o arrastra para seleccionar varios) para abrir el gestor.</li>
+                        <li><strong>Cerrar Día (Día Completo):</strong> Cierra la agenda para esa fecha.</li>
+                        <li><strong>Horario Especial / Jornada Partida:</strong> Configura un tramo personalizado para ese día.</li>
+                        <li>Las modificaciones a nivel <strong>Global</strong> cierran el salón y se heredan por todas las empleadas, a menos que tengan un override manual.</li>
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-100">
+                
+                <!-- Bloqueos Rápidos -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-orange-700 font-black uppercase text-xs">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                        3. Bloqueos de Horas (Agenda)
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-500">
+                        Se usan para bloquear huecos rápidos en el día a día (descansos, reuniones, asuntos personales) directamente desde la agenda de citas.
+                    </p>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-slate-500 pl-2">
+                        <li>Haz doble clic sobre el día en el calendario de la especialista y pulsa en <strong>🔒 Bloquear</strong>.</li>
+                        <li>Puedes bloquear un tramo de horas o marcar <strong>Día Completo</strong>.</li>
+                        <li>Soporta <strong>Recurrencia</strong> (diaria, semanal, bisemanal) para bloqueos periódicos.</li>
+                        <li><strong>Restaurar Horario:</strong> Si deseas eliminar el bloqueo, haz clic en el botón naranja <code>🔁 Restaurar</code> que aparece en la celda del calendario mensual o en la cabecera de la ficha diaria.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="p-6 bg-slate-50 border-t flex justify-end">
+                <button onclick="window.closeClosuresInfoModal()" class="px-5 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-colors">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Éxito Configuración -->
+    <div id="config-success-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-[32px] w-full max-w-sm overflow-hidden shadow-2xl border border-slate-100 flex flex-col p-6 text-center space-y-4">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl">✓</div>
+            <h3 class="font-serif italic font-bold text-xl text-slate-800">Acción Confirmada</h3>
+            <div id="config-success-summary" class="text-xs font-bold text-slate-500 space-y-2 py-2">
+                <!-- Resumen dinámico -->
+            </div>
+            <button onclick="window.closeConfigSuccessModal()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-colors">Aceptar</button>
+        </div>
+    </div>
+
+    <script src="admin_logic.js?v=20260707_V21"></script>
 </body>
 </html>

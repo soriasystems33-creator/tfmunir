@@ -54,6 +54,11 @@ const getSvcByName=name=>servicesDB.find(s=>s.name===name);
 window.closeModal=()=>document.getElementById('modal').classList.add('hidden');
 window.closeDayModal=()=>document.getElementById('day-modal').classList.add('hidden');
 window.closeConfigDayModal=()=>document.getElementById('config-day-modal').classList.add('hidden');
+window.openClosuresInfoModal=()=>{
+  document.getElementById('closures-info-modal').classList.remove('hidden');
+  if(window.lucide)lucide.createIcons();
+};
+window.closeClosuresInfoModal=()=>document.getElementById('closures-info-modal').classList.add('hidden');
 window.acceptGDPR=()=>{localStorage.setItem('gdpr_consent',new Date().toISOString());document.getElementById('gdpr-banner').classList.add('hidden')};
 window.checkGDPR=()=>{if(!localStorage.getItem('gdpr_consent'))document.getElementById('gdpr-banner').classList.remove('hidden')};
 // ---- SERVICES CRUD ----
@@ -215,26 +220,73 @@ window.getClientList = () => {
 // ---- DAILY CONFIG HELPER ----
 const getDailyConfig=(dateStr,entity='global')=>{try{
     const sd=config.specialDays?.[dateStr];
-    // 1) Override MANUAL de la empleada
-    if(entity!=='global' && sd?.[entity] && !sd[entity]._auto){
-        console.log(`[DEBUG] Día ${dateStr} (${entity}): Override manual. Tipo: ${sd[entity].type}`);
-        return sd[entity];
+    // 1) Override MANUAL de la empleada (por ID o por Nombre)
+    let empOverride = null;
+    if (entity !== 'global' && sd) {
+        if (sd[entity] && !sd[entity]._auto) {
+            empOverride = sd[entity];
+        } else {
+            const empByName = employeesDB.find(e => e.name.toLowerCase() === entity.toLowerCase());
+            if (empByName && sd[empByName.id] && !sd[empByName.id]._auto) {
+                empOverride = sd[empByName.id];
+            } else {
+                const empById = employeesDB.find(e => e.id === entity || String(e.id) === String(entity));
+                if (empById && sd[empById.name] && !sd[empById.name]._auto) {
+                    empOverride = sd[empById.name];
+                }
+            }
+        }
     }
-    const d=parseDate(dateStr);const day=d.getDay();
-    // 2) Estado del día especial global
-    let globalClosed=false, globalStart=null, globalEnd=null;
+    if (empOverride) {
+        console.log(`[DEBUG] Día ${dateStr} (${entity}): Override manual. Tipo: ${empOverride.type}`);
+        return empOverride;
+    }
+    // 2) Estado del día especial global (si está configurado, sobrescribe horarios semanales o generales)
     if(sd?.global){
-        if(sd.global.type==='closed') globalClosed=true;
-        else if(sd.global.type==='custom'){globalStart=sd.global.start;globalEnd=sd.global.end}
+        if(sd.global.type==='closed') {
+            console.log(`[DEBUG] Día ${dateStr} (${entity}): CERRADO por día especial GLOBAL.`);
+            return {type:'closed'};
+        } else if(sd.global.type==='split') {
+            console.log(`[DEBUG] Día ${dateStr} (${entity}): Usando jornada partida especial GLOBAL del día.`);
+            return {
+                type: 'split',
+                start: sd.global.start,
+                end: sd.global.end,
+                start2: sd.global.start2,
+                end2: sd.global.end2
+            };
+        } else if(sd.global.type==='custom') {
+            console.log(`[DEBUG] Día ${dateStr} (${entity}): Usando horario especial GLOBAL del día: ${sd.global.start}-${sd.global.end}`);
+            return {
+                type: 'custom',
+                start: sd.global.start,
+                end: sd.global.end,
+                closedHours: sd.global.closedHours || []
+            };
+        }
+    }
+    let globalClosed=false, globalStart=null, globalEnd=null;
+    const d=parseDate(dateStr);const day=d.getDay();
+    // 2.5) Si el día de la semana está cerrado en el horario semanal general, se cierra para todos
+    if (config?.weekly && config.weekly[day] && config.weekly[day].closed) {
+        return { type: 'closed' };
     }
     // 3) Horario semanal individual
-    let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null;
+    let hasWeekly=false, weeklyClosed=false, weeklyStart=null, weeklyEnd=null, weeklyType=null, weeklyStart2=null, weeklyEnd2=null;
     if(entity!=='global'){
         const ew=config[`weekly_${entity}`];
         if(ew && ew[day]){
             hasWeekly=true;
             if(ew[day].closed) weeklyClosed=true;
-            else{weeklyStart=ew[day].start;weeklyEnd=ew[day].end}
+            else{
+                weeklyType=ew[day].type || 'standard';
+                weeklyStart=ew[day].start;
+                weeklyEnd=ew[day].end;
+                if(weeklyType==='split'){
+                    weeklyStart2=ew[day].start2;
+                    weeklyEnd2=ew[day].end2;
+                }
+            }
         }
     }
     // 4) Global "Cerrado" → cierra a TODOS (festivo, etc)
@@ -242,15 +294,41 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
         console.log(`[DEBUG] Día ${dateStr} (${entity}): CERRADO por día especial GLOBAL.`);
         return{type:'closed'};
     }
-    // 5) Empleada con horario semanal → intersectar con global custom si existe
+    // 5) Empleada con horario semanal → intersectar con global custom / global weekly
     if(hasWeekly){
         if(weeklyClosed){
             console.log(`[DEBUG] Día ${dateStr} (${entity}): Cerrado por horario SEMANAL del empleado (día ${day}).`);
             return{type:'closed'};
         }
+        const gWeekly = config?.weekly?.[day];
+        if (weeklyType === 'split') {
+            let s1 = weeklyStart, e1 = weeklyEnd, s2 = weeklyStart2, e2 = weeklyEnd2;
+            if (globalStart) {
+                s1 = t2m(weeklyStart) > t2m(globalStart) ? weeklyStart : globalStart;
+                e1 = t2m(weeklyEnd) < t2m(globalEnd) ? weeklyEnd : globalEnd;
+                s2 = t2m(weeklyStart2) > t2m(globalStart) ? weeklyStart2 : globalStart;
+                e2 = t2m(weeklyEnd2) < t2m(globalEnd) ? weeklyEnd2 : globalEnd;
+            } else if (gWeekly && gWeekly.type === 'split') {
+                s1 = t2m(weeklyStart) > t2m(gWeekly.start) ? weeklyStart : gWeekly.start;
+                e1 = t2m(weeklyEnd) < t2m(gWeekly.end) ? weeklyEnd : gWeekly.end;
+                s2 = t2m(weeklyStart2) > t2m(gWeekly.start2) ? weeklyStart2 : gWeekly.start2;
+                e2 = t2m(weeklyEnd2) < t2m(gWeekly.end2) ? weeklyEnd2 : gWeekly.end2;
+            }
+            return { type: 'split', start: s1, end: e1, start2: s2, end2: e2 };
+        }
+        if (gWeekly && gWeekly.type === 'split' && !globalStart) {
+            const s1 = t2m(weeklyStart) > t2m(gWeekly.start) ? weeklyStart : gWeekly.start;
+            const e1 = t2m(weeklyEnd) < t2m(gWeekly.end) ? weeklyEnd : gWeekly.end;
+            const s2 = t2m(weeklyStart) > t2m(gWeekly.start2) ? weeklyStart : gWeekly.start2;
+            const e2 = t2m(weeklyEnd) < t2m(gWeekly.end2) ? weeklyEnd : gWeekly.end2;
+            if (t2m(s2) < t2m(e2)) {
+                return { type: 'split', start: s1, end: e1, start2: s2, end2: e2 };
+            } else {
+                return { type: 'standard', start: s1, end: e1 };
+            }
+        }
         const start = globalStart ? (t2m(weeklyStart)>t2m(globalStart)?weeklyStart:globalStart) : weeklyStart;
         const end = globalEnd ? (t2m(weeklyEnd)<t2m(globalEnd)?weeklyEnd:globalEnd) : weeklyEnd;
-        console.log(`[DEBUG] Día ${dateStr} (${entity}): ${start}-${end} (weekly+global)`);
         return{type:'standard',start,end};
     }
     // 6) Global custom (empleada sin weekly)
@@ -265,6 +343,9 @@ const getDailyConfig=(dateStr,entity='global')=>{try{
             if(w.closed){
                 console.log(`[DEBUG] Día ${dateStr} (${entity}): Cerrado por horario SEMANAL GLOBAL (día ${day}).`);
                 return{type:'closed'};
+            }
+            if(w.type === 'split') {
+                return { type: 'split', start: w.start, end: w.end, start2: w.start2, end2: w.end2 };
             }
             console.log(`[DEBUG] Día ${dateStr} (${entity}): Horario semanal global ${w.start}-${w.end}`);
             return{type:'standard',start:w.start,end:w.end};
@@ -546,6 +627,11 @@ if(empFilter){
   const totalPx=(endH-startH)*PX;
   const empColor=emp.color||'#5b8f7a';
   const empApts=dayApts.filter(function(a){return empInApt(a,emp.name)});
+  const empBlocks=window.loadBlocksForDate(ds,emp.name);
+  const empOverride = config.specialDays?.[ds]?.[emp.id] || config.specialDays?.[ds]?.[emp.name];
+  const hasBlocks = empBlocks.length > 0;
+  const hasOverride = empOverride && !empOverride._auto;
+  const showRestore = hasBlocks || hasOverride;
 
   cols.style.gridTemplateColumns='1fr';
 
@@ -560,6 +646,12 @@ if(empFilter){
       <span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px;color:white;background:${empColor}">${empApts.length} citas</span>
     </div>
     <div style="display:flex;gap:8px">
+      ${showRestore ? `
+      <button onclick="window.restoreDayForEmp('${ds}','${emp.name.replace(/'/g,"\\'")}');"
+        style="background:#ea580c;color:white;border:none;padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+        🔁 Restaurar horario
+      </button>
+      ` : ''}
       <button onclick="window.closeDayModal();window.openBlockModal('${emp.name.replace(/'/g,"\\'")}','${ds}')"
         style="background:#f97316;color:white;border:none;padding:7px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer">
         🔒 Bloquear
@@ -573,7 +665,16 @@ if(empFilter){
 
   if(dc.type==='closed'){
     html+=`<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#7a6b67">
-      <div style="text-align:center"><div style="font-size:32px;margin-bottom:8px">🔒</div><p style="font-weight:700">Día cerrado</p></div>
+      <div style="text-align:center">
+        <div style="font-size:32px;margin-bottom:8px">🚫</div>
+        <p style="font-weight:700;font-size:14px;color:#ef4444;margin-bottom:12px">Este día está cerrado</p>
+        ${showRestore ? `
+        <button onclick="window.restoreDayForEmp('${ds}','${emp.name.replace(/'/g,"\\'")}');"
+          style="background:#ef4444;color:white;border:none;padding:8px 16px;border-radius:12px;font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;box-shadow:0 4px 12px rgba(239,68,68,0.2)">
+          Restaurar horario normal
+        </button>
+        ` : ''}
+      </div>
     </div>`;
   } else {
     // Determine bounds
@@ -612,9 +713,11 @@ if(empFilter){
     // Blocks
     const empBlocks=window.loadBlocksForDate(ds,emp.name);
     empBlocks.forEach(bl=>{
-      const blStartM = parseInt(bl.startTime.split(':')[0],10)*60 + parseInt(bl.startTime.split(':')[1],10);
-      const blEndM = parseInt(bl.endTime.split(':')[0],10)*60 + parseInt(bl.endTime.split(':')[1],10);
+      const rawStart = parseInt(bl.startTime.split(':')[0],10)*60 + parseInt(bl.startTime.split(':')[1],10);
+      const rawEnd = parseInt(bl.endTime.split(':')[0],10)*60 + parseInt(bl.endTime.split(':')[1],10);
       const sm2 = startH * 60;
+      const blStartM = Math.max(rawStart, sm2);
+      const blEndM = Math.min(rawEnd, endH * 60);
       const blTopPx = (blStartM - sm2)/60*PX;
       const blHeightPx = Math.max((blEndM - blStartM)/60*PX - 2, 24);
       const recLabel = bl.recurrence==='daily'?'Diario':bl.recurrence==='weekly'?'Semanal':bl.recurrence==='biweekly'?'Bisemanal':'';
@@ -626,11 +729,17 @@ if(empFilter){
           box-shadow:0 2px 6px rgba(0,0,0,.04);"
         onmouseover="this.style.boxShadow='0 4px 12px rgba(249,115,22,0.2)';this.style.transform='scaleX(1.02)'"
         onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,.04)';this.style.transform=''">
-        <div style="display:flex;align-items:center;gap:5px">
-          <span style="font-size:11px;font-weight:900;font-family:monospace;color:#c2410c">${bl.startTime}</span>
-          <span style="font-size:9px;color:#f97316;font-weight:bold">🔒 BLOQUEADO</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:5px;width:100%">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:11px;font-weight:900;font-family:monospace;color:#c2410c">${bl.startTime}</span>
+            <span style="font-size:9px;color:#f97316;font-weight:bold">🔒 BLOQUEADO</span>
+          </div>
+          <button onclick="event.stopPropagation(); window.deleteBlock('${bl.id}')"
+            style="background:#ea580c;color:white;border:none;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin-left:auto;z-index:20;box-shadow:0 1px 2px rgba(0,0,0,0.1)">
+            Restaurar horario
+          </button>
         </div>
-        <div style="font-size:11px;font-weight:800;color:#c2410c;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(bl.reason)}</div>
+        <div style="font-size:11px;font-weight:800;color:#c2410c;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${esc(bl.reason)}</div>
       </div>`;
     });
 
@@ -841,16 +950,23 @@ if(isConfig){
       <div class="text-red-400 text-[10px] font-black uppercase italic flex items-center gap-1 mt-2">
         <i data-lucide="ban" class="w-3 h-3"></i> CERRADO
       </div>
-      <div class="flex-1"></div>
+      <div class="flex-grow"></div>
       <div class="text-red-400 text-[10px] font-black uppercase text-center mb-1 tracking-widest">CERRADO</div>
     `;
   } else if (hasFullDayBlock) {
+    const fdb = empBlocks.find(b => b.startTime === '00:00' && b.endTime === '23:59') || { id: '' };
     div.className=`calendar-day bg-orange-50 border-orange-200 flex flex-col ${isToday?'ring-2 ring-teal-500 z-10':''}`;
     div.innerHTML=`
       <div class="font-black text-orange-800 text-lg relative flex items-center">${d} ${pi}</div>
       <div class="text-orange-500 text-[10px] font-black uppercase italic flex items-center gap-1 mt-2">
         <i data-lucide="lock" class="w-3 h-3"></i> BLOQUEADO
       </div>
+      <button onclick="event.stopPropagation(); window.deleteBlock('${fdb.id}')"
+              style="margin-top: 4px; background: #ea580c; color: white; border: none; padding: 3px 6px; border-radius: 6px; font-size: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; width: fit-content; z-index: 20;"
+              onmouseover="this.style.background='#c2410c'"
+              onmouseout="this.style.background='#ea580c'">
+        Restaurar
+      </button>
       <div class="flex-1"></div>
       <div class="text-orange-500 text-[10px] font-black uppercase text-center mb-1 tracking-widest">DÍA COMPLETO</div>
     `;
@@ -893,6 +1009,11 @@ frag.appendChild(div)}body.appendChild(frag);if(window.lucide)lucide.createIcons
 // ---- RENDER MAIN ----
 window.render=()=>{try{console.log("🛠️ window.render() llamado, currentTab:",currentTab," specialistViewLevel:",specialistViewLevel);
 const months=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];const label=document.getElementById('current-view-label');const title=document.getElementById('view-title');if(!label||!title){console.warn('render: Missing DOM elements (current-view-label or view-title)');return}
+const btnInfo = document.getElementById('btn-info-closures');
+if (btnInfo) {
+    const isCalendarOrConfig = currentTab.startsWith('calendar') || currentTab === 'config';
+    btnInfo.classList.toggle('hidden', !isCalendarOrConfig);
+}
 if(currentTab==='billing'&&incomeChart&&typeof incomeChart.destroy==='function'){incomeChart.destroy();incomeChart=null;}
 if(currentTab==='calendar_all'){if(specialistViewLevel==='global-day')window.renderGlobalDay();else{label.innerText=`${months[currentViewDate.getMonth()]} ${currentViewDate.getFullYear()}`;title.innerText="Agenda Global";document.getElementById('view-global-day').classList.add('hidden');const calView=document.getElementById('view-calendar');calView.classList.remove('hidden');renderMonthGrid('calendar-body',false)}}
 else if(currentTab.startsWith('calendar_emp_')){const eid=currentTab.replace('calendar_emp_','');const emp=getEmpById(eid);label.innerText=`${months[currentViewDate.getMonth()]} ${currentViewDate.getFullYear()}`;title.innerText=`Calendario: ${emp?emp.name:''}`;renderMonthGrid('calendar-body',false)}
@@ -1004,6 +1125,22 @@ employeesDB.forEach(e=>{
     html+=`<button onclick="window.setConfigEntity('${e.name}')" class="px-5 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${configEntity===e.name?'bg-white shadow-sm':'text-slate-400 hover:bg-slate-200'}">${e.name}</button>`;
 });
 c.innerHTML=html;
+const calendarSection = document.getElementById('config-calendar-section');
+if (calendarSection) {
+    if (configEntity === 'global') {
+        calendarSection.classList.remove('hidden');
+    } else {
+        calendarSection.classList.add('hidden');
+    }
+}
+const warningEl = document.getElementById('employee-closure-warning');
+if (warningEl) {
+    if (configEntity !== 'global') {
+        warningEl.classList.remove('hidden');
+    } else {
+        warningEl.classList.add('hidden');
+    }
+}
 };
 window.setConfigEntity=e=>{configEntity=e;window.renderStandardInputs();window.renderConfigEntityTabs();renderMonthGrid('config-calendar-body',true)};
 window.renderStandardInputs=()=>{const c=document.getElementById('standard-inputs-container');if(!c)return;
@@ -1094,6 +1231,7 @@ window.openConfigDay=ds=>{
   document.getElementById('local-start').value=tmpLocal.start||config.start||"09:00";
   document.getElementById('local-end').value=tmpLocal.end||config.end||"20:00";
   window.setLocalConfigType(tmpLocal.type);
+  window.renderClosedHoursList();
   document.getElementById('config-day-modal').classList.remove('hidden');
   if(window.lucide)lucide.createIcons();
 };
@@ -1116,12 +1254,57 @@ document.getElementById('local-custom-fields').classList.toggle('hidden',type!==
 const splitFields=document.getElementById('local-split-extra');if(splitFields)splitFields.classList.toggle('hidden',type!=='split')};
 // ── CIERRES DE HORA — Añadir / Eliminar / Renderizar ────────────────────────
 window.addClosedHour=()=>{};
-window.removeClosedHour=()=>{};
-window.renderClosedHoursList=()=>{};
+window.removeClosedHour=async(idx)=>{
+  if(!confirm('¿Eliminar este cierre de horas?'))return;
+  tmpClosedHours.splice(idx,1);
+  let sd={...(config.specialDays||{})};
+  if(!sd[selectedDayInModal])sd[selectedDayInModal]={};
+  if(tmpClosedHours.length>0){
+    sd[selectedDayInModal].closedHours=tmpClosedHours;
+  }else{
+    delete sd[selectedDayInModal].closedHours;
+  }
+  if(Object.keys(sd[selectedDayInModal]||{}).length===0)delete sd[selectedDayInModal];
+  try {
+    const docRef = doc(db, 'artifacts', AID, 'public', 'data', 'settings', 'main');
+    await updateDoc(docRef, { specialDays: sd });
+    config.specialDays = sd;
+    window.renderClosedHoursList();
+    if(currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+  } catch(e) {
+    alert('Error al eliminar cierre: ' + e.message);
+  }
+};
+window.renderClosedHoursList=()=>{
+  const container=document.getElementById('local-closed-hours-section');
+  const listEl=document.getElementById('local-closed-hours-list');
+  if(!container||!listEl)return;
+  if(tmpClosedHours.length===0){
+    container.classList.add('hidden');
+    return;
+  }
+  container.classList.remove('hidden');
+  listEl.innerHTML=tmpClosedHours.map((ch,idx)=>{
+    const chEnt=ch.entity||'global';
+    const entityName=chEnt==='global'?'Global':(employeesDB.find(e=>e.id===chEnt||(e.name||'').toLowerCase()===chEnt.toLowerCase())?.name||chEnt);
+    return `<div class="flex items-center justify-between p-3 rounded-2xl border bg-white text-xs font-bold" style="border-color:var(--brown-light);color:var(--brown)">
+      <div class="flex items-center gap-2">
+        <span class="text-rose-500">⏰</span>
+        <span>${ch.from} - ${ch.to}</span>
+        <span class="text-[9px] px-2 py-0.5 rounded-full uppercase font-black" style="background:#e0f2fe;color:#075985">${entityName}</span>
+      </div>
+      <button onclick="window.removeClosedHour(${idx})" class="p-1.5 hover:bg-red-50 rounded-xl text-red-500 transition-colors" title="Eliminar cierre">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    </div>`;
+  }).join('');
+  if(window.lucide)lucide.createIcons();
+};
 
 // ── Obtener cierres de hora aplicables para un día y entidad ──────────────
 window.getClosedHoursForDay=(dateStr, entity)=>{
-  return [];
+  const list=config.specialDays?.[dateStr]?.closedHours||[];
+  return list.filter(ch=>ch.entity==='global'||ch.entity.toLowerCase()===entity.toLowerCase());
 };
 
 window.saveConfigDay=async()=>{try{
@@ -1170,7 +1353,13 @@ if(configEntity==='global'){
   }
 }
 
-    // closedHours ya no se gestionan aquí (se usan blocks por especialista)
+    // Guardar closedHours (legacy)
+    if(tmpClosedHours.length>0){
+      if(!sd[selectedDayInModal]) sd[selectedDayInModal]={};
+      sd[selectedDayInModal].closedHours=tmpClosedHours;
+    }else{
+      if(sd[selectedDayInModal]) delete sd[selectedDayInModal].closedHours;
+    }
 
     // Limpiar día si está completamente vacío
     const dayKeys=Object.keys(sd[selectedDayInModal]||{});
@@ -1356,6 +1545,51 @@ window.saveBlock=async(blockData)=>{
 window.deleteBlock=async(id)=>{
   if(!confirm('¿Eliminar este bloqueo?'))return;
   await deleteDoc(doc(db,'artifacts',AID,'public','data','blocks',id));
+  if (document.getElementById('day-modal') && !document.getElementById('day-modal').classList.contains('hidden')) {
+    let empFilter = null;
+    if (currentTab.startsWith('calendar_emp_')) {
+      const eid = currentTab.replace('calendar_emp_','');
+      const emp = getEmpById(eid);
+      if (emp) empFilter = emp.name;
+    }
+    window.openDayModal(selectedDayInModal, empFilter);
+  }
+};
+window.restoreDayForEmp = async (ds, empName) => {
+  if (!confirm('¿Restaurar el horario por defecto para este día?')) return;
+  const empBlocks = window.loadBlocksForDate(ds, empName);
+  const deletePromises = empBlocks.map(bl => 
+    deleteDoc(doc(db, 'artifacts', AID, 'public', 'data', 'blocks', bl.id))
+  );
+  await Promise.all(deletePromises);
+  let sd = { ...(config.specialDays || {}) };
+  if (sd[ds]) {
+    const emp = employeesDB.find(e => e.name.toLowerCase() === empName.toLowerCase());
+    if (emp) {
+      delete sd[ds][emp.id];
+      delete sd[ds][emp.name];
+    } else {
+      delete sd[ds][empName];
+    }
+    const globalVal = sd[ds]?.global;
+    if (globalVal && emp) {
+      sd[ds][emp.id] = { ...globalVal, _auto: true };
+      sd[ds][emp.name] = { ...globalVal, _auto: true };
+    }
+    const dayKeys = Object.keys(sd[ds] || {});
+    if (dayKeys.length === 0) delete sd[ds];
+    await updateDoc(doc(db, 'artifacts', AID, 'public', 'data', 'settings', 'main'), { specialDays: sd });
+    config.specialDays = sd;
+  }
+  if (currentTab === 'config') renderMonthGrid('config-calendar-body', true);
+  else window.render();
+  let empFilter = null;
+  if (currentTab.startsWith('calendar_emp_')) {
+    const eid = currentTab.replace('calendar_emp_','');
+    const emp = getEmpById(eid);
+    if (emp) empFilter = emp.name;
+  }
+  window.openDayModal(ds, empFilter);
 };
 window.openBlockModal=(empName, defaultDate)=>{
   document.getElementById('block-modal-emp').innerText = empName;
@@ -1545,8 +1779,8 @@ const isEmpBusy=(empName,start,end)=>{
 let bs=null,be=null;
 const checkEmps=isMulti?empNames:(empNames.length===1?empNames:[]);
 if(checkEmps.length>0){
-  checkEmps.forEach(en=>{const dc=getDailyConfig(date,en);if(dc.type!=='closed'){const s=dc.start||config.start||"09:00",e=dc.end||config.end||"20:00";if(bs===null||t2m(s)<bs)bs=t2m(s);if(be===null||t2m(e)>be)be=t2m(e)}});
-}else{const dc=getDailyConfig(date,'global');if(dc.type!=='closed'){bs=t2m(dc.start||config.start||"09:00");be=t2m(dc.end||config.end||"20:00")}}
+  checkEmps.forEach(en=>{const dc=getDailyConfig(date,en);if(dc.type!=='closed'){const s=dc.start||config.start||"09:00";const e=dc.type==='split'?(dc.end2||dc.end||config.end||"20:00"):(dc.end||config.end||"20:00");if(bs===null||t2m(s)<bs)bs=t2m(s);if(be===null||t2m(e)>be)be=t2m(e)}});
+}else{const dc=getDailyConfig(date,'global');if(dc.type!=='closed'){bs=t2m(dc.start||config.start||"09:00");be=t2m(dc.type==='split'?(dc.end2||dc.end||config.end||"20:00"):(dc.end||config.end||"20:00"))}}
 if(bs===null){bs=t2m("09:00");be=t2m("20:00")}
 const dur=isMulti?maxDur:totalDur;
 for(let t=bs;t+dur<=be;t+=15){
@@ -1557,7 +1791,9 @@ for(let t=bs;t+dur<=be;t+=15){
       const dc=getDailyConfig(date,en);if(dc.type==='closed')return false;
       const eS=t2m(dc.start||config.start||"09:00"),eE=t2m(dc.end||config.end||"20:00");
       const eDur=empDurs[en];
-      if(t<eS||t+eDur>eE)return false;
+      let inShift = (t>=eS && t+eDur<=eE);
+      if(dc.type==='split'&&dc.start2&&dc.end2){const eS2=t2m(dc.start2),eE2=t2m(dc.end2);if(t>=eS2&&t+eDur<=eE2)inShift=true;}
+      if(!inShift)return false;
       const closedH=window.getClosedHoursForDay(date,en);
       if(closedH.some(ch=>ch.entity==='global'||ch.entity===en)){const chFrom=t2m(ch.from),chTo=t2m(ch.to);if(t<chTo&&t+eDur>=chFrom)return false}
       return !isEmpBusy(en,t,t+eDur);
@@ -1566,7 +1802,9 @@ for(let t=bs;t+dur<=be;t+=15){
     const empName=empNames[0]||'';
     const dc=getDailyConfig(date,empName||'global');if(dc.type==='closed'){free=false}else{
       const eS=t2m(dc.start||config.start||"09:00"),eE=t2m(dc.end||config.end||"20:00");
-      if(t>=eS&&t+dur<=eE){
+      let inShift = (t>=eS && t+dur<=eE);
+      if(dc.type==='split'&&dc.start2&&dc.end2){const eS2=t2m(dc.start2),eE2=t2m(dc.end2);if(t>=eS2&&t+dur<=eE2)inShift=true;}
+      if(inShift){
         const closedH=window.getClosedHoursForDay(date,empName);
         var chBlocked=closedH.some(function(ch){var chFrom=t2m(ch.from),chTo=t2m(ch.to);return t<chTo&&t+dur>=chFrom});
         if(!chBlocked&&!isEmpBusy(empName,t,t+dur))free=true;
@@ -1968,18 +2206,96 @@ window.clearConfigSelection = () => {
 };
 
 window.openMultiDayModal = () => {
+    // Hide action bar when opening modal
+    document.getElementById('config-multi-action-bar')?.classList.add('opacity-0', 'pointer-events-none');
+
     document.getElementById('config-multi-day-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('config-multi-day-modal').classList.remove('opacity-0'), 10);
     const entity = (currentTab === 'config') ? 'global' : currentTab.replace('calendar_emp_', '');
     document.getElementById('cmd-entity').value = entity;
-    document.getElementById('cmd-title').innerText = `Configurar ${selectedConfigDays.size} días`;
+    
+    const days = Array.from(selectedConfigDays);
+    const firstDay = days[0];
+    selectedDayInModal = firstDay; // Track day for potential single day updates
+
+    document.getElementById('cmd-title').innerText = days.length === 1 ? `Configurar Día: ${firstDay}` : `Configurar ${days.length} días`;
     const empName = entity === 'global' ? 'Global' : (getEmpById(entity)?.name || entity);
     document.getElementById('cmd-subtitle').innerText = empName;
+
+    // Cargar cierres de hora para este día único (si aplica)
+    tmpClosedHours = [];
+    if (days.length === 1 && firstDay) {
+        tmpClosedHours = [...(config.specialDays?.[firstDay]?.closedHours || [])];
+        window.renderClosedHoursList();
+    } else {
+        document.getElementById('local-closed-hours-section')?.classList.add('hidden');
+    }
+
+    // Cargar horario configurado del primer día seleccionado (si existe) para no sobreescribir con valores por defecto
+    let type = 'continuous';
+    let s1 = '09:00', e1 = '14:00';
+    let s2 = '16:00', e2 = '20:00';
+    
+    // Fallback: cargar del horario semanal genérico según el día de la semana
+    if (firstDay) {
+        const dayNum = parseDate(firstDay).getDay(); // 0: Dom, 1: Lun, ..., 6: Sáb
+        let w = null;
+        if (entity !== 'global') {
+            const ew = config[`weekly_${entity}`];
+            if (ew && ew[dayNum]) {
+                w = ew[dayNum];
+            }
+        }
+        if (!w && config.weekly && config.weekly[dayNum]) {
+            w = config.weekly[dayNum];
+        }
+        
+        if (w) {
+            type = (w.type === 'split') ? 'split' : 'continuous';
+            s1 = w.start || '09:00';
+            e1 = w.end || (type === 'split' ? '14:00' : '20:00');
+            if (w.type === 'split') {
+                s2 = w.start2 || '16:00';
+                e2 = w.end2 || '20:00';
+            } else {
+                s2 = '16:00';
+                e2 = w.end || '20:00';
+            }
+        }
+    }
+    
+    if (firstDay && config.specialDays?.[firstDay]?.[entity]) {
+        const se = config.specialDays[firstDay][entity];
+        if (se.start && se.end) {
+            s1 = se.start;
+            if (se.closedHours && se.closedHours.length > 0) {
+                type = 'split';
+                e1 = se.closedHours[0];
+                const lastCh = se.closedHours[se.closedHours.length - 1];
+                let m = parseInt(lastCh.split(':')[0], 10)*60 + parseInt(lastCh.split(':')[1], 10) + 15;
+                let h = Math.floor(m/60);
+                let mins = m%60;
+                s2 = String(h).padStart(2,'0') + ':' + String(mins).padStart(2,'0');
+                e2 = se.end;
+            } else {
+                type = 'continuous';
+                e1 = se.end;
+            }
+        }
+    }
+    
+    document.getElementById('cmd-shift-type').value = type;
+    document.getElementById('cmd-start-1').value = s1;
+    document.getElementById('cmd-end-1').value = e1;
+    document.getElementById('cmd-start-2').value = s2;
+    document.getElementById('cmd-end-2').value = e2;
+    window.toggleCmdShiftType();
 };
 
 window.closeMultiDayModal = () => {
     document.getElementById('config-multi-day-modal').classList.add('opacity-0');
     setTimeout(() => document.getElementById('config-multi-day-modal').classList.add('hidden'), 200);
+    window.clearConfigSelection();
 };
 
 window.toggleCmdShiftType = () => {
@@ -2049,10 +2365,33 @@ window.applyMultiDayConfig = async (action) => {
     
     try {
         await updateDoc(doc(db,'artifacts',AID,'public','data','settings','main'), { specialDays: up.specialDays });
+        config.specialDays = up.specialDays;
         window.closeMultiDayModal();
         window.clearConfigSelection();
         if (currentTab === 'config') renderMonthGrid('config-calendar-body', true);
         else if (currentTab.startsWith('calendar_emp_')) renderMonthGrid('calendar-body', false);
+
+        // Mostrar modal resumen confirmación de éxito
+        let typeText = '';
+        if (action === 'closed') typeText = 'Configurado como 🚫 CERRADO.';
+        else if (action === 'special') typeText = `Horario especial: ⏰ ${specialStart} - ${specialEnd}.`;
+        else if (action === 'reset') typeText = 'Restaurar al horario estándar.';
+
+        const daysFormatted = days.map(ds => {
+            const [y, m, d] = ds.split('-').map(Number);
+            const dateObj = new Date(y, m - 1, d);
+            return dateObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        }).join(', ');
+
+        const summaryEl = document.getElementById('config-success-summary');
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+                <div class="text-sm font-bold text-slate-800">${typeText}</div>
+                <div class="text-[10px] text-slate-400 mt-2 uppercase tracking-widest">Fechas afectadas:</div>
+                <div class="text-xs text-slate-600 max-h-[80px] overflow-y-auto px-2 font-medium">${daysFormatted}</div>
+            `;
+        }
+        document.getElementById('config-success-modal')?.classList.remove('hidden');
     } catch (e) {
         alert('Error: ' + e.message);
     }
@@ -2074,7 +2413,7 @@ window.toggleEmpConfigMode = () => {
     } else {
         btn.classList.replace('bg-orange-500', 'bg-orange-100');
         btn.classList.replace('text-white', 'text-orange-700');
-        btn.innerHTML = '<i data-lucide="settings" class="w-4 h-4"></i> Configurar Días Libres';
+        btn.innerHTML = '<i data-lucide="settings" class="w-4 h-4"></i> Configurar Varios Días';
         calBody.classList.remove('ring-4', 'ring-orange-200');
         selectedConfigDays.clear();
         window.updateConfigMultiActionBar();
@@ -2126,6 +2465,7 @@ onSnapshot(collection(db,'artifacts',AID,'public','data','employees'),snap=>{
 onSnapshot(collection(db,'artifacts',AID,'public','data','blocks'),snap=>{
   blocksDB=snap.docs.map(d=>({id:d.id,...d.data()}));
   if(currentTab.startsWith('calendar_emp_')&&specialistViewLevel==='day')window.renderSpecialistDayView();
+  else if(currentTab.startsWith('calendar')) window.render();
 });
 
 }catch(err){console.error("❌ ERROR CRÍTICO EN startListeners:",err)}};
@@ -2819,6 +3159,11 @@ window.renderExpenses=()=>{
       <span style="color:#e05c6a;font-size:14px">Total: <strong>${total.toFixed(2).replace('.',',')} €</strong></span>
     </div>
   </div>`;
+};
+
+// ── CONFIRMATION SUCCESS MODAL ACTIONS ────────────────────────────────
+window.closeConfigSuccessModal = () => {
+  document.getElementById('config-success-modal')?.classList.add('hidden');
 };
 
 // ══════════════════════════════════════════════════════════════
